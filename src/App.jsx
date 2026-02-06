@@ -85,31 +85,36 @@ function App() {
         />
       </main>
 
-      {/* LAYER 2: Header with title and destination input */}
-      <header className="absolute top-0 left-0 right-0 z-10 p-2 sm:p-4 safe-area-top">
-        <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg p-3 sm:p-4 max-w-md mx-auto">
-          {/* App title */}
-          <h1 className="text-lg sm:text-xl font-bold text-center text-blue-600 mb-2 sm:mb-3">
-            🚗 Are We There Yet?
-          </h1>
+      {/* LAYER 2: Header with title, destination input, and progress panel */}
+      <header className="absolute top-0 left-0 right-0 z-10 pt-3 sm:pt-5 safe-area-top" style={{ paddingLeft: '3%', paddingRight: '3%' }}>
+        <div className="bg-white rounded-3xl shadow-xl px-4 sm:px-6" style={{ paddingTop: '12px', paddingBottom: route ? '12px' : '24px' }}>
+          {/* App title - big emoji, friendly text */}
+          <div className="text-center mb-1">
+            <span className="text-2xl sm:text-3xl">🚗</span>
+            <h1 className="text-sm sm:text-base font-bold text-gray-800 mt-0.5">
+              Are We There Yet?
+            </h1>
+          </div>
 
-          {/* Destination input with autocomplete */}
-          <DestinationInput
-            onDestinationSelect={handleDestinationSelect}
-            userLocation={userPosition}
-          />
+          {/* Destination input with autocomplete - 12.5% margins on both sides */}
+          <div style={{ marginLeft: '12.5%', marginRight: '12.5%' }}>
+            <DestinationInput
+              onDestinationSelect={handleDestinationSelect}
+              userLocation={userPosition}
+            />
+          </div>
+
+          {/* Progress panel (shows when there's a route) */}
+          {route && (
+            <div className="mt-2 pt-2 border-t-2 border-gray-100">
+              <ProgressPanel route={route} />
+            </div>
+          )}
         </div>
       </header>
 
-      {/* LAYER 3: Progress panel (only shows when there's a route) */}
-      {route && (
-        <div className="absolute top-36 sm:top-44 left-0 right-0 z-10 flex justify-center px-2 sm:px-4">
-          <ProgressPanel route={route} />
-        </div>
-      )}
-
       {/* LAYER 4: Fun facts card */}
-      <footer className="absolute bottom-0 left-0 right-0 z-10 p-2 sm:p-4 safe-area-bottom">
+      <footer className="absolute bottom-0 left-0 right-0 z-10 pb-2 sm:pb-4 safe-area-bottom" style={{ paddingLeft: '3%', paddingRight: '3%' }}>
         <FunFactCard
           position={userPosition}
           isActive={destination !== null}

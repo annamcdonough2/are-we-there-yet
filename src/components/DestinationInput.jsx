@@ -114,11 +114,11 @@ function DestinationInput({ onDestinationSelect, userLocation }) {
   // ============================================================
 
   return (
-    <div ref={containerRef} className="relative w-full max-w-md">
+    <div ref={containerRef} className="relative w-full">
       {/* Input field with search icon */}
       <div className="relative">
         {/* Search icon */}
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+        <span className="absolute top-1/2 -translate-y-1/2 text-xl pointer-events-none" style={{ left: '12px' }}>
           🔍
         </span>
 
@@ -129,45 +129,46 @@ function DestinationInput({ onDestinationSelect, userLocation }) {
           onChange={handleInputChange}
           onFocus={() => suggestions.length > 0 && setIsOpen(true)}
           placeholder="Where are we going?"
-          className="w-full pl-10 pr-10 py-3 text-lg border-2 border-gray-200 rounded-xl
-                     focus:border-blue-500 focus:outline-none
-                     placeholder-gray-400"
+          style={{ paddingLeft: '48px' }}
+          className="w-full pr-12 py-3 text-lg bg-white border-2 border-gray-200 rounded-2xl
+                     focus:border-blue-400 focus:outline-none
+                     placeholder-gray-400 transition-all duration-200"
         />
 
         {/* Loading spinner or clear button */}
         {isSearching ? (
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin">
+          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-2xl animate-spin">
             ⏳
           </span>
         ) : query && (
           <button
             onClick={handleClear}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400
-                       hover:text-gray-600 text-xl"
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-2xl text-gray-400
+                       hover:text-gray-600 active:scale-90 transition-all"
           >
-            ✕
+            ✖️
           </button>
         )}
       </div>
 
       {/* Dropdown with suggestions */}
       {isOpen && suggestions.length > 0 && (
-        <ul className="absolute z-20 w-full mt-2 bg-white border border-gray-200
-                       rounded-xl shadow-lg overflow-hidden">
+        <ul className="absolute z-20 w-full mt-3 bg-white border-2 border-gray-100
+                       rounded-2xl shadow-xl overflow-hidden">
           {suggestions.map((place) => (
             <li key={place.id}>
               <button
                 onClick={() => handleSuggestionClick(place)}
-                className="w-full px-4 py-3 text-left hover:bg-blue-50
+                className="w-full px-5 py-4 text-left hover:bg-blue-50 active:bg-blue-100
                            border-b border-gray-100 last:border-b-0
-                           flex items-start gap-3"
+                           flex items-center gap-4 transition-colors"
               >
-                {/* Location pin icon */}
-                <span className="text-blue-500 mt-1">📍</span>
+                {/* Location pin icon - bigger */}
+                <span className="text-3xl">📍</span>
 
                 {/* Address text */}
                 <div>
-                  <div className="font-medium text-gray-800">
+                  <div className="font-semibold text-gray-800 text-lg">
                     {place.shortName}
                   </div>
                   <div className="text-sm text-gray-500">
@@ -182,11 +183,11 @@ function DestinationInput({ onDestinationSelect, userLocation }) {
 
       {/* Selected destination confirmation */}
       {selectedPlace && (
-        <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-xl
-                        flex items-center gap-2">
-          <span className="text-green-600">✓</span>
-          <span className="text-green-800 text-sm">
-            Destination set! Route will appear on map.
+        <div className="mt-4 p-4 bg-green-50 border-2 border-green-200 rounded-2xl
+                        flex items-center gap-3">
+          <span className="text-3xl">✅</span>
+          <span className="text-green-700 font-medium">
+            Let's go! Route is on the map.
           </span>
         </div>
       )}

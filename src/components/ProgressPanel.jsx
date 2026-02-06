@@ -24,83 +24,68 @@ function ProgressPanel({ route }) {
   const progress = route.progress || 0
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-4 min-w-[300px]">
-      {/* Stats row: Time and Distance */}
-      <div className="flex items-center justify-around mb-4">
-        {/* Time remaining */}
-        <div className="flex items-center gap-2">
-          <span className="text-2xl">⏱️</span>
-          <div>
-            <div className="text-2xl font-bold text-gray-800">
-              {formatDuration(route.durationMinutes)}
-            </div>
-            <div className="text-xs text-gray-500 uppercase">
-              Time left
-            </div>
+    <div className="w-full">
+      {/* Stats row: Time and Distance - centered in each half, matching progress bar margins */}
+      <div className="flex items-center mb-2" style={{ marginLeft: '10%', marginRight: '10%' }}>
+        {/* Time remaining - centered in left half */}
+        <div className="flex-1 flex flex-col items-center justify-center text-center">
+          <span className="text-xl sm:text-2xl">⏱️</span>
+          <div className="text-lg sm:text-xl font-bold text-gray-800">
+            {formatDuration(route.durationMinutes)}
           </div>
+          <div className="text-xs text-gray-500">Time left</div>
         </div>
 
         {/* Divider line */}
-        <div className="h-12 w-px bg-gray-200" />
+        <div className="h-12 w-0.5 bg-gray-200 rounded-full" />
 
-        {/* Distance remaining */}
-        <div className="flex items-center gap-2">
-          <span className="text-2xl">📍</span>
-          <div>
-            <div className="text-2xl font-bold text-gray-800">
-              {formatDistance(route.distanceMiles)}
-            </div>
-            <div className="text-xs text-gray-500 uppercase">
-              To go
-            </div>
+        {/* Distance remaining - centered in right half */}
+        <div className="flex-1 flex flex-col items-center justify-center text-center">
+          <span className="text-xl sm:text-2xl">📍</span>
+          <div className="text-lg sm:text-xl font-bold text-gray-800">
+            {formatDistance(route.distanceMiles)}
           </div>
+          <div className="text-xs text-gray-500">To go</div>
         </div>
       </div>
 
-      {/* Progress bar */}
-      <div className="relative">
+      {/* Progress bar - compact with 10% margins */}
+      <div className="relative" style={{ marginLeft: '10%', marginRight: '10%' }}>
         {/* Background track */}
-        <div className="h-4 bg-gray-200 rounded-full overflow-hidden">
-          {/* Filled portion */}
+        <div className="h-4 bg-gray-100 rounded-full overflow-visible border border-gray-200">
+          {/* Filled portion - gradient for fun */}
           <div
-            className="h-full bg-gradient-to-r from-blue-400 to-blue-600 rounded-full transition-all duration-500 ease-out"
-            style={{ width: `${progress}%` }}
+            className="h-full bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 rounded-full transition-all duration-700 ease-out"
+            style={{ width: `${Math.max(progress, 2)}%` }}
           />
         </div>
 
-        {/* Car emoji that moves along the bar */}
+        {/* Car emoji that moves along the bar - flipped to face right! */}
         <div
-          className="absolute top-1/2 -translate-y-1/2 transition-all duration-500 ease-out"
-          style={{ left: `calc(${progress}% - 12px)` }}
+          className="absolute top-1/2 -translate-y-1/2 transition-all duration-700 ease-out"
+          style={{ left: `calc(${Math.min(progress, 92)}%)` }}
         >
-          <span className="text-xl">🚗</span>
+          <span className="text-4xl inline-block" style={{ transform: 'scaleX(-1)' }}>🚗</span>
         </div>
 
-        {/* Start and end markers */}
-        <div className="flex justify-between mt-1 text-xs text-gray-400">
-          <span>Start</span>
-          <span>{Math.round(progress)}% complete</span>
-          <span>🏁</span>
+        {/* Finish flag at end */}
+        <div className="absolute top-1/2 -translate-y-1/2 -right-1">
+          <span className="text-3xl">🏁</span>
         </div>
       </div>
 
-      {/* Encouraging message based on progress */}
-      <div className="mt-3 text-center text-sm">
-        {progress < 25 && (
-          <span className="text-blue-600">🚀 Adventure starting!</span>
-        )}
-        {progress >= 25 && progress < 50 && (
-          <span className="text-blue-600">⭐ Making great progress!</span>
-        )}
-        {progress >= 50 && progress < 75 && (
-          <span className="text-purple-600">🎉 More than halfway there!</span>
-        )}
-        {progress >= 75 && progress < 95 && (
-          <span className="text-green-600">🌟 Almost there!</span>
-        )}
-        {progress >= 95 && (
-          <span className="text-green-600 font-bold">🏁 You made it!</span>
-        )}
+      {/* Progress percentage and message - single line */}
+      <div className="text-center mt-2 flex items-center justify-center gap-2">
+        <span className="text-2xl">
+          {progress < 25 && '🚀'}
+          {progress >= 25 && progress < 50 && '⭐'}
+          {progress >= 50 && progress < 75 && '🎉'}
+          {progress >= 75 && progress < 95 && '🌟'}
+          {progress >= 95 && '🏁'}
+        </span>
+        <span className="text-sm font-semibold text-gray-600">
+          {Math.round(progress)}% complete
+        </span>
       </div>
     </div>
   )

@@ -9,7 +9,7 @@
  * FEATURES:
  * - Animated appearance when new facts arrive
  * - Loading state while getting facts
- * - Text-to-speech: click 🔊 to hear the fact read aloud!
+ * - Text-to-speech: click speaker to hear the fact read aloud!
  */
 
 import { useState, useEffect } from 'react'
@@ -136,10 +136,13 @@ function FunFactCard({ position, isActive }) {
   // Don't show anything if not active or no fact yet
   if (!isActive) {
     return (
-      <div className="bg-white rounded-xl shadow-lg p-4 max-w-lg mx-auto">
-        <p className="text-center text-gray-600">
-          ✨ Enter a destination to start your trip!
-        </p>
+      <div className="bg-white rounded-3xl shadow-xl py-5 sm:py-6">
+        <div className="flex items-center justify-center gap-4">
+          <span className="text-4xl">✨</span>
+          <p className="text-lg text-gray-600 font-medium">
+            Enter a destination to start your trip!
+          </p>
+        </div>
       </div>
     )
   }
@@ -147,10 +150,12 @@ function FunFactCard({ position, isActive }) {
   // Loading state
   if (isLoading && !funFact) {
     return (
-      <div className="bg-white rounded-xl shadow-lg p-4 max-w-lg mx-auto">
-        <div className="flex items-center justify-center gap-3">
-          <span className="text-2xl animate-bounce">🔍</span>
-          <p className="text-gray-600">Looking for fun facts nearby...</p>
+      <div className="bg-white rounded-3xl shadow-xl py-5 sm:py-6">
+        <div className="flex items-center gap-4" style={{ marginLeft: '12.5%', marginRight: '12.5%' }}>
+          <span className="text-4xl animate-bounce">🔍</span>
+          <p className="text-lg text-gray-600 font-medium">
+            Looking for fun facts nearby...
+          </p>
         </div>
       </div>
     )
@@ -159,71 +164,65 @@ function FunFactCard({ position, isActive }) {
   // Show the fun fact
   return (
     <div
-      className={`bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl shadow-lg p-4 max-w-lg mx-auto border border-purple-100
+      className={`bg-white rounded-3xl shadow-xl px-6
                   transition-all duration-300 ease-out
                   ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+      style={{ paddingTop: '12px', paddingBottom: '12px' }}
     >
-      {/* Header */}
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <span className="text-xl">🎉</span>
-          <span className="font-semibold text-purple-700">Fun Fact!</span>
+      {/* Header row */}
+      <div className="flex flex-col items-center justify-center text-center mb-3">
+        <div className="flex items-center gap-3">
+          <span className="text-4xl">🎉</span>
+          <span className="text-xl font-bold text-purple-600">Fun Fact!</span>
         </div>
-
-        {/* Location badge */}
-        {placeName && (
-          <span className="text-xs bg-purple-100 text-purple-600 px-2 py-1 rounded-full">
-            📍 {placeName}
-          </span>
-        )}
       </div>
 
-      {/* The fun fact */}
-      <p className="text-gray-700 text-lg leading-relaxed">
+      {/* The fun fact text */}
+      <p className="text-gray-700 text-lg sm:text-xl leading-relaxed text-center">
         {funFact || "🚗 You're on an adventure! Fun facts coming soon..."}
       </p>
 
       {/* Loading indicator for new facts */}
       {isLoading && funFact && (
-        <div className="mt-2 text-sm text-purple-500 flex items-center gap-1">
-          <span className="animate-spin">⏳</span>
-          Getting new fact...
+        <div className="mt-3 flex items-center justify-center gap-2 text-purple-500">
+          <span className="text-2xl animate-spin">⏳</span>
+          <span className="font-medium">Getting new fact...</span>
         </div>
       )}
 
-      {/* Speaker button */}
-      <div className="mt-3 flex justify-end items-center gap-2">
-        {/* Speech support indicator */}
-        {!isSpeechSupported() && (
-          <span className="text-xs text-gray-400">
-            (Speech not supported)
+      {/* Speaker button row */}
+      <div className="mt-4 flex justify-center">
+        {isSpeechSupported() ? (
+          <button
+            onClick={handleSpeak}
+            disabled={!funFact}
+            className={`flex items-center gap-2 py-2 rounded-full font-semibold
+                       transition-all duration-200 active:scale-95
+                       ${isSpeaking
+                         ? 'bg-gray-500 text-white shadow-lg'
+                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}
+                       ${!funFact ? 'opacity-50 cursor-not-allowed' : ''}`}
+            style={{ paddingLeft: '5px', paddingRight: '5px' }}
+          >
+            <span className="text-2xl">{isSpeaking ? '⏹️' : '🔊'}</span>
+            <span>{isSpeaking ? 'Stop' : 'Read Aloud'}</span>
+          </button>
+        ) : (
+          <span className="text-sm text-gray-400">
+            (Speech not supported on this device)
           </span>
         )}
-
-        {/* The button */}
-        <button
-          onClick={handleSpeak}
-          disabled={!funFact || !isSpeechSupported()}
-          className={`p-2 rounded-full transition-all duration-200
-                     ${isSpeaking
-                       ? 'bg-purple-500 text-white animate-pulse'
-                       : 'text-gray-400 hover:text-purple-500 hover:bg-purple-50'}
-                     ${(!funFact || !isSpeechSupported()) ? 'opacity-50 cursor-not-allowed' : ''}`}
-          title={isSpeaking ? 'Stop reading' : 'Read aloud'}
-        >
-          {isSpeaking ? '⏹️' : '🔊'}
-        </button>
       </div>
 
       {/* Speaking indicator */}
       {isSpeaking && (
-        <div className="mt-2 text-sm text-purple-600 flex items-center justify-center gap-2">
+        <div className="mt-4 flex items-center justify-center gap-3">
           <span className="flex gap-1">
-            <span className="animate-bounce" style={{ animationDelay: '0ms' }}>🔊</span>
-            <span className="animate-bounce" style={{ animationDelay: '150ms' }}>🔊</span>
-            <span className="animate-bounce" style={{ animationDelay: '300ms' }}>🔊</span>
+            <span className="text-2xl animate-bounce" style={{ animationDelay: '0ms' }}>🔊</span>
+            <span className="text-2xl animate-bounce" style={{ animationDelay: '150ms' }}>🔊</span>
+            <span className="text-2xl animate-bounce" style={{ animationDelay: '300ms' }}>🔊</span>
           </span>
-          Reading aloud... tap to stop
+          <span className="text-purple-600 font-medium">Reading aloud...</span>
         </div>
       )}
     </div>
