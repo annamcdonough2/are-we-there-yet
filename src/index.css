@@ -1,0 +1,55 @@
+@import "tailwindcss";
+
+/* Kid-friendly color palette */
+:root {
+  --color-primary: #3B82F6;    /* Bright blue */
+  --color-secondary: #FCD34D;  /* Sunny yellow */
+  --color-accent: #8B5CF6;     /* Playful purple */
+  --color-background: #F9FAFB; /* Soft white */
+}
+
+/* Reset and base styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  background-color: var(--color-background);
+  min-height: 100vh;
+  /* Prevent pull-to-refresh on mobile which interferes with map */
+  overscroll-behavior: none;
+}
+
+#root {
+  width: 100%;
+  height: 100vh;
+  /* Ensure full height on mobile browsers */
+  height: 100dvh;
+}
+
+/* Mobile-specific improvements */
+@media (max-width: 640px) {
+  /* Larger touch targets on mobile */
+  button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Adjust input for mobile keyboards */
+  input {
+    font-size: 16px; /* Prevents iOS zoom on focus */
+  }
+}
+
+/* Safe area for phones with notches */
+@supports (padding: max(0px)) {
+  .safe-area-bottom {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+  .safe-area-top {
+    padding-top: max(1rem, env(safe-area-inset-top));
+  }
+}
