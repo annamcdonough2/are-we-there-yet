@@ -38,12 +38,7 @@ const MAX_VERIFICATION_ATTEMPTS = 3
  * Generate a single fun fact (internal helper)
  * This is the raw fact generation without verification
  */
-async function generateFunFact(placeName, isDestination, previousFacts = []) {
-  // Build instruction to avoid previous facts if any
-  const avoidPreviousText = previousFacts.length > 0
-    ? `\n\nIMPORTANT: Do NOT use these facts (they couldn't be verified):\n${previousFacts.map((f, i) => `${i + 1}. ${f}`).join('\n')}\n\nGive a DIFFERENT fact instead.`
-    : ''
-
+async function generateFunFact(placeName, isDestination) {
   // Build the appropriate prompt based on whether this is a destination or current location
   const prompt = isDestination
     ? `You are a fun, friendly guide for kids on a road trip. Tell them about ${placeName}, their destination, with an exciting fun fact!
@@ -64,7 +59,6 @@ Examples:
 "🍎 You're heading to Campbell! Campbell is known as the Orchard City because it used to have lots of fruit trees. What do you know about orchards?"
 "🗼 We're going to Las Vegas! Did you know they have a mini Eiffel Tower that's half the size of the real one in Paris?"
 "🎢 You're heading to Orlando! This city has more theme parks than almost anywhere else in the world. What ride would you want to go on?"
-${avoidPreviousText}
 
 Now tell the kids about their destination, ${placeName}:`
     : `You are a fun, friendly guide for kids on a road trip. Tell them about ${placeName} with an exciting fun fact!
@@ -85,7 +79,6 @@ Examples:
 "🍎 You're in Campbell, CA! Campbell is known as the Orchard City because it used to have lots of fruit trees. What do you know about orchards?"
 "🗼 We're in Las Vegas! Did you know they have a mini Eiffel Tower that's half the size of the real one in Paris?"
 "🎢 You're in Orlando! This city has more theme parks than almost anywhere else in the world. What ride would you want to go on?"
-${avoidPreviousText}
 
 Now tell the kids about ${placeName}:`
 
@@ -95,7 +88,7 @@ Now tell the kids about ${placeName}:`
       const response = await fetch('/api/generate-fact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ placeName, isDestination, previousFacts })
+        body: JSON.stringify({ placeName, isDestination })
       })
 
       if (!response.ok) {
@@ -167,22 +160,17 @@ Now tell the kids about ${placeName}:`
  * @returns {Promise<{fact: string, verified: boolean} | null>} - Verified fun fact or null
  */
 export async function getFunFact(placeName, isDestination = false) {
-  const previousFacts = []
-
   for (let attempt = 1; attempt <= MAX_VERIFICATION_ATTEMPTS; attempt++) {
     console.log(`[Verification] Attempt ${attempt}/${MAX_VERIFICATION_ATTEMPTS} for ${placeName}`)
 
     // Step 1: Generate a fun fact
-    const fact = await generateFunFact(placeName, isDestination, previousFacts)
+    const fact = await generateFunFact(placeName, isDestination)
 
     // If generation failed completely, try again
     if (!fact) {
       console.log(`[Verification] Generation failed, trying again...`)
       continue
     }
-
-    // Track this fact to avoid repeating it
-    previousFacts.push(fact)
 
     // Step 2: Verify the fact using web search
     console.log(`[Verification] Verifying: "${fact.substring(0, 50)}..."`)

@@ -18,11 +18,7 @@ const MAX_VERIFICATION_ATTEMPTS = 3
 /**
  * Generate a fun fact (internal helper)
  */
-async function generateFact(apiKey, placeName, isDestination, previousFacts = []) {
-  const avoidPreviousText = previousFacts.length > 0
-    ? `\n\nIMPORTANT: Do NOT use these facts (they couldn't be verified):\n${previousFacts.map((f, i) => `${i + 1}. ${f}`).join('\n')}\n\nGive a DIFFERENT fact instead.`
-    : ''
-
+async function generateFact(apiKey, placeName, isDestination) {
   const prompt = isDestination
     ? `You are a fun, friendly guide for kids on a road trip. Tell them about ${placeName}, their destination, with an exciting fun fact!
 
@@ -37,7 +33,6 @@ Rules:
 - Keep it to 2-3 short sentences total
 - Use simple words a 6-year-old would understand
 - Include a relevant emoji at the start
-${avoidPreviousText}
 
 Now tell the kids about their destination, ${placeName}:`
     : `You are a fun, friendly guide for kids on a road trip. Tell them about ${placeName} with an exciting fun fact!
@@ -53,7 +48,6 @@ Rules:
 - Keep it to 2-3 short sentences total
 - Use simple words a 6-year-old would understand
 - Include a relevant emoji at the start
-${avoidPreviousText}
 
 Now tell the kids about ${placeName}:`
 
@@ -175,15 +169,12 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Server configuration error' })
   }
 
-  const previousFacts = []
-
   try {
     for (let attempt = 1; attempt <= MAX_VERIFICATION_ATTEMPTS; attempt++) {
       console.log(`[Verification] Attempt ${attempt}/${MAX_VERIFICATION_ATTEMPTS} for ${placeName}`)
 
       // Generate a fact
-      const fact = await generateFact(apiKey, placeName, isDestination, previousFacts)
-      previousFacts.push(fact)
+      const fact = await generateFact(apiKey, placeName, isDestination)
 
       // Verify it
       console.log(`[Verification] Verifying: "${fact.substring(0, 50)}..."`)

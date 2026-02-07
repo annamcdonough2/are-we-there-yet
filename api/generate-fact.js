@@ -11,7 +11,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  const { placeName, isDestination, previousFacts = [] } = req.body
+  const { placeName, isDestination } = req.body
 
   if (!placeName) {
     return res.status(400).json({ error: 'placeName is required' })
@@ -23,11 +23,6 @@ export default async function handler(req, res) {
     console.error('ANTHROPIC_API_KEY not set in environment')
     return res.status(500).json({ error: 'Server configuration error' })
   }
-
-  // Build instruction to avoid previous facts if any
-  const avoidPreviousText = previousFacts.length > 0
-    ? `\n\nIMPORTANT: Do NOT use these facts (they couldn't be verified):\n${previousFacts.map((f, i) => `${i + 1}. ${f}`).join('\n')}\n\nGive a DIFFERENT fact instead.`
-    : ''
 
   const prompt = isDestination
     ? `You are a fun, friendly guide for kids on a road trip. Tell them about ${placeName}, their destination, with an exciting fun fact!
@@ -43,7 +38,6 @@ Rules:
 - Keep it to 2-3 short sentences total
 - Use simple words a 6-year-old would understand
 - Include a relevant emoji at the start
-${avoidPreviousText}
 
 Now tell the kids about their destination, ${placeName}:`
     : `You are a fun, friendly guide for kids on a road trip. Tell them about ${placeName} with an exciting fun fact!
@@ -59,7 +53,6 @@ Rules:
 - Keep it to 2-3 short sentences total
 - Use simple words a 6-year-old would understand
 - Include a relevant emoji at the start
-${avoidPreviousText}
 
 Now tell the kids about ${placeName}:`
 
