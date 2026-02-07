@@ -24,11 +24,17 @@ function FunFactCard({ position, isActive, destination, route }) {
   // The current fun fact to display
   const [funFact, setFunFact] = useState(null)
 
+  // Is the current fact verified?
+  const [isVerified, setIsVerified] = useState(false)
+
   // The place name we got the fact for
   const [placeName, setPlaceName] = useState(null)
 
   // Are we loading a new fact?
   const [isLoading, setIsLoading] = useState(false)
+
+  // Loading status message
+  const [loadingStatus, setLoadingStatus] = useState('')
 
   // Track the last place we got a fact for (to avoid duplicates)
   const [lastPlace, setLastPlace] = useState(null)
@@ -97,6 +103,7 @@ function FunFactCard({ position, isActive, destination, route }) {
       try {
         setIsLoading(true)
         setIsVisible(false)
+        setLoadingStatus('Finding fun facts...')
 
         // Use reverse geocoding to get the city/place name from destination coordinates
         // This gives us a clean city name like "San Francisco, California"
@@ -115,23 +122,39 @@ function FunFactCard({ position, isActive, destination, route }) {
           }
         }
 
-        // Get a fun fact about the DESTINATION (pass true for isDestination)
-        const fact = await getFunFact(placeForFact, true)
+        setLoadingStatus('Verifying facts...')
+
+        // Get a VERIFIED fun fact about the DESTINATION (pass true for isDestination)
+        const result = await getFunFact(placeForFact, true)
 
         // Small delay for animation
         await new Promise(resolve => setTimeout(resolve, 300))
 
         const shortPlace = placeForFact.split(',')[0].trim()
-        setFunFact(fact)
-        setPlaceName(shortPlace)
-        setLastPlace(shortPlace)
+
+        if (result && result.fact) {
+          setFunFact(result.fact)
+          setIsVerified(result.verified)
+          setPlaceName(shortPlace)
+          setLastPlace(shortPlace)
+          setIsVisible(true)
+          setIsCollapsed(false)  // Expand when new fact arrives
+        } else {
+          // All verification attempts failed - show a generic message
+          setFunFact(`🚗 You're heading to ${shortPlace}! Keep your eyes open for cool things on your adventure!`)
+          setIsVerified(false)
+          setPlaceName(shortPlace)
+          setLastPlace(shortPlace)
+          setIsVisible(true)
+        }
+
         setIsLoading(false)
-        setIsVisible(true)
-        setIsCollapsed(false)  // Expand when new fact arrives
+        setLoadingStatus('')
 
       } catch (error) {
         console.error('Error fetching destination fun fact:', error)
         setIsLoading(false)
+        setLoadingStatus('')
       }
     }
 
@@ -230,6 +253,7 @@ function FunFactCard({ position, isActive, destination, route }) {
 
         setIsLoading(true)
         setLastPlace(shortPlace)
+        setLoadingStatus('Finding fun facts...')
 
         // Only stop speech if we've already done the initial announcement
         // (don't interrupt the trip announcement!)
@@ -241,35 +265,48 @@ function FunFactCard({ position, isActive, destination, route }) {
         // Animate out the old fact
         setIsVisible(false)
 
-        // Get a fun fact from Claude
-        const fact = await getFunFact(place, false)  // false = current location, not destination
+        setLoadingStatus('Verifying facts...')
+
+        // Get a VERIFIED fun fact from Claude
+        const result = await getFunFact(place, false)  // false = current location, not destination
 
         // Small delay for animation
         await new Promise(resolve => setTimeout(resolve, 300))
 
-        setFunFact(fact)
-        setPlaceName(shortPlace)
-        setIsLoading(false)
+        if (result && result.fact) {
+          setFunFact(result.fact)
+          setIsVerified(result.verified)
+          setPlaceName(shortPlace)
+          setIsVisible(true)
+          setIsCollapsed(false)  // Expand when new fact arrives
 
-        // Animate in the new fact
-        setIsVisible(true)
-        setIsCollapsed(false)  // Expand when new fact arrives
-
-        // Auto-read the new fun fact
-        if (isSpeechSupported()) {
-          try {
-            setIsSpeaking(true)
-            await speak(fact)
-            setIsSpeaking(false)
-          } catch (error) {
-            console.error('Error auto-reading fun fact:', error)
-            setIsSpeaking(false)
+          // Auto-read the new fun fact
+          if (isSpeechSupported()) {
+            try {
+              setIsSpeaking(true)
+              await speak(result.fact)
+              setIsSpeaking(false)
+            } catch (error) {
+              console.error('Error auto-reading fun fact:', error)
+              setIsSpeaking(false)
+            }
           }
+        } else {
+          // All verification attempts failed - show generic message
+          const genericFact = `🚗 You're in ${shortPlace}! Keep your eyes open for cool things on your adventure!`
+          setFunFact(genericFact)
+          setIsVerified(false)
+          setPlaceName(shortPlace)
+          setIsVisible(true)
         }
+
+        setIsLoading(false)
+        setLoadingStatus('')
 
       } catch (error) {
         console.error('Error fetching fun fact:', error)
         setIsLoading(false)
+        setLoadingStatus('')
       }
     }
 
@@ -377,10 +414,10 @@ function FunFactCard({ position, isActive, destination, route }) {
   if (isLoading && !funFact) {
     return (
       <div className="bg-white rounded-3xl shadow-xl py-5 sm:py-6 landscape-compact">
-        <div className="flex items-center gap-4 landscape-gap-sm" style={{ marginLeft: '10%', marginRight: '10%' }}>
+        <div className="flex items-center justify-center gap-4 landscape-gap-sm">
           <span className="text-4xl animate-bounce landscape-emoji-sm">🔍</span>
           <p className="text-lg text-gray-600 font-medium landscape-text-sm">
-            Looking for fun facts nearby...
+            {loadingStatus || 'Looking for fun facts nearby...'}
           </p>
         </div>
       </div>
@@ -440,6 +477,9 @@ function FunFactCard({ position, isActive, destination, route }) {
         <div className="flex items-center gap-3 landscape-gap-sm">
           <span className="text-4xl landscape-emoji-sm">🎉</span>
           <span className="text-xl font-bold text-purple-600 landscape-text-sm">Fun Fact!</span>
+          {isVerified && (
+            <span className="text-2xl landscape-emoji-sm">✅</span>
+          )}
         </div>
       </div>
 

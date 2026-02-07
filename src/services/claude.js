@@ -6,6 +6,11 @@
  * Given a location name, Claude creates an interesting, educational fact
  * that's appropriate for children.
  *
+ * VERIFICATION SYSTEM:
+ * Each fact is verified using Claude's web search before being shown.
+ * If a fact can't be verified, we try generating a new one (up to 3 attempts).
+ * Only verified facts are displayed to ensure accuracy.
+ *
  * SECURITY NOTE (Plain English):
  * Right now, we're calling Claude directly from the browser. This is fine
  * for testing on YOUR computer because only YOU can see the API key.
@@ -18,25 +23,27 @@
  * This keeps the key hidden from users. We'll do this in Phase 7 (Deploy).
  */
 
+import { verifyFact } from './verification'
+
 // Get the API key from environment variables (only available in development)
 const ANTHROPIC_API_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY
 
 // Check if we're in production (no VITE_ API key available)
 const isProduction = !ANTHROPIC_API_KEY
 
+// Maximum number of attempts to generate a verified fact
+const MAX_VERIFICATION_ATTEMPTS = 3
+
 /**
- * Get a fun fact about a location
- *
- * HOW IT WORKS (Plain English):
- * - In DEVELOPMENT: Calls Claude API directly (uses VITE_ANTHROPIC_API_KEY)
- * - In PRODUCTION: Calls our serverless function at /api/fun-fact
- *   which keeps the API key secret on the server
- *
- * @param {string} placeName - Name of the place (e.g., "Springfield, Illinois")
- * @param {boolean} isDestination - If true, this is the destination (use "heading to"), otherwise current location (use "in")
- * @returns {Promise<string>} - A fun fact about the place
+ * Generate a single fun fact (internal helper)
+ * This is the raw fact generation without verification
  */
-export async function getFunFact(placeName, isDestination = false) {
+async function generateFunFact(placeName, isDestination, previousFacts = []) {
+  // Build instruction to avoid previous facts if any
+  const avoidPreviousText = previousFacts.length > 0
+    ? `\n\nIMPORTANT: Do NOT use these facts (they couldn't be verified):\n${previousFacts.map((f, i) => `${i + 1}. ${f}`).join('\n')}\n\nGive a DIFFERENT fact instead.`
+    : ''
+
   // Build the appropriate prompt based on whether this is a destination or current location
   const prompt = isDestination
     ? `You are a fun, friendly guide for kids on a road trip. Tell them about ${placeName}, their destination, with an exciting fun fact!
@@ -57,6 +64,7 @@ Examples:
 "🍎 You're heading to Campbell! Campbell is known as the Orchard City because it used to have lots of fruit trees. What do you know about orchards?"
 "🗼 We're going to Las Vegas! Did you know they have a mini Eiffel Tower that's half the size of the real one in Paris?"
 "🎢 You're heading to Orlando! This city has more theme parks than almost anywhere else in the world. What ride would you want to go on?"
+${avoidPreviousText}
 
 Now tell the kids about their destination, ${placeName}:`
     : `You are a fun, friendly guide for kids on a road trip. Tell them about ${placeName} with an exciting fun fact!
@@ -77,16 +85,17 @@ Examples:
 "🍎 You're in Campbell, CA! Campbell is known as the Orchard City because it used to have lots of fruit trees. What do you know about orchards?"
 "🗼 We're in Las Vegas! Did you know they have a mini Eiffel Tower that's half the size of the real one in Paris?"
 "🎢 You're in Orlando! This city has more theme parks than almost anywhere else in the world. What ride would you want to go on?"
+${avoidPreviousText}
 
 Now tell the kids about ${placeName}:`
 
   try {
     // PRODUCTION: Use serverless function (keeps API key secret)
     if (isProduction) {
-      const response = await fetch('/api/fun-fact', {
+      const response = await fetch('/api/generate-fact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ placeName, isDestination })
+        body: JSON.stringify({ placeName, isDestination, previousFacts })
       })
 
       if (!response.ok) {
@@ -139,8 +148,60 @@ Now tell the kids about ${placeName}:`
     if (isDestination) {
       return `🚗 You're heading to ${cityName}! Keep your eyes open for cool things on your adventure. What do you think you'll see there?`
     }
-    return `🚗 You're in ${cityName}! Keep your eyes open for cool things on your adventure. What do you see outside?`
+    return null  // Return null to indicate generation failed (will trigger retry or fallback)
   }
+}
+
+/**
+ * Get a VERIFIED fun fact about a location
+ *
+ * HOW IT WORKS (Plain English):
+ * 1. Generate a fun fact using Claude
+ * 2. Verify it using Claude's web search
+ * 3. If verified, return it with verified=true
+ * 4. If not verified, try again with a different fact (up to 3 attempts)
+ * 5. Only returns verified facts (or null if all attempts fail)
+ *
+ * @param {string} placeName - Name of the place (e.g., "Springfield, Illinois")
+ * @param {boolean} isDestination - If true, this is the destination, otherwise current location
+ * @returns {Promise<{fact: string, verified: boolean} | null>} - Verified fun fact or null
+ */
+export async function getFunFact(placeName, isDestination = false) {
+  const previousFacts = []
+
+  for (let attempt = 1; attempt <= MAX_VERIFICATION_ATTEMPTS; attempt++) {
+    console.log(`[Verification] Attempt ${attempt}/${MAX_VERIFICATION_ATTEMPTS} for ${placeName}`)
+
+    // Step 1: Generate a fun fact
+    const fact = await generateFunFact(placeName, isDestination, previousFacts)
+
+    // If generation failed completely, try again
+    if (!fact) {
+      console.log(`[Verification] Generation failed, trying again...`)
+      continue
+    }
+
+    // Track this fact to avoid repeating it
+    previousFacts.push(fact)
+
+    // Step 2: Verify the fact using web search
+    console.log(`[Verification] Verifying: "${fact.substring(0, 50)}..."`)
+    const verification = await verifyFact(fact, placeName)
+
+    if (verification.verified) {
+      console.log(`[Verification] ✅ Verified with confidence ${verification.confidence}`)
+      return {
+        fact: fact,
+        verified: true
+      }
+    } else {
+      console.log(`[Verification] ❌ Not verified (confidence: ${verification.confidence}), trying different fact...`)
+    }
+  }
+
+  // All attempts failed - return null (component will handle this)
+  console.log(`[Verification] All ${MAX_VERIFICATION_ATTEMPTS} attempts failed for ${placeName}`)
+  return null
 }
 
 /**
