@@ -74,7 +74,7 @@ Rules:
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': ANTHROPIC_API_KEY,
-        'anthropic-version': '2025-01-01',
+        'anthropic-version': '2023-06-01',
         'anthropic-dangerous-direct-browser-access': 'true'
       },
       body: JSON.stringify({
@@ -83,7 +83,8 @@ Rules:
         // Enable Claude's built-in web search tool
         tools: [
           {
-            type: 'web_search_20250305'
+            type: 'web_search_20250305',
+            name: 'web_search'
           }
         ],
         messages: [{ role: 'user', content: prompt }]

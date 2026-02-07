@@ -107,14 +107,15 @@ Rules:
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': apiKey,
-        'anthropic-version': '2025-01-01'
+        'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
         max_tokens: 4096,
         tools: [
           {
-            type: 'web_search_20250305'
+            type: 'web_search_20250305',
+            name: 'web_search'
           }
         ],
         messages: [{ role: 'user', content: prompt }]
