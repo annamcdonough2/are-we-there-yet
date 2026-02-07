@@ -87,17 +87,17 @@ function App() {
 
       {/* LAYER 2: Header with title, destination input, and progress panel */}
       <header className="absolute top-0 left-0 right-0 z-10 pt-3 sm:pt-5 safe-area-top" style={{ paddingLeft: '3%', paddingRight: '3%' }}>
-        <div className="bg-white rounded-3xl shadow-xl px-4 sm:px-6" style={{ paddingTop: '12px', paddingBottom: route ? '12px' : '24px' }}>
-          {/* App title - big emoji, friendly text */}
-          <div className="text-center mb-1">
+        <div className="bg-white rounded-3xl shadow-xl px-4 sm:px-6 landscape-compact" style={{ paddingTop: '12px', paddingBottom: route ? '12px' : '24px' }}>
+          {/* App title - big emoji, friendly text (hidden in landscape) */}
+          <div className="text-center mb-1 landscape-hide">
             <span className="text-2xl sm:text-3xl">🚗</span>
             <h1 className="text-sm sm:text-base font-bold text-gray-800 mt-0.5">
               Are We There Yet?
             </h1>
           </div>
 
-          {/* Destination input with autocomplete - 12.5% margins on both sides */}
-          <div style={{ marginLeft: '12.5%', marginRight: '12.5%' }}>
+          {/* Destination input with autocomplete (hidden in landscape) */}
+          <div className="landscape-hide" style={{ marginLeft: '12.5%', marginRight: '12.5%' }}>
             <DestinationInput
               onDestinationSelect={handleDestinationSelect}
               userLocation={userPosition}
@@ -106,7 +106,7 @@ function App() {
 
           {/* Progress panel (shows when there's a route) */}
           {route && (
-            <div className="mt-2 pt-2 border-t-2 border-gray-100">
+            <div className="mt-2 pt-2 border-t-2 border-gray-100 landscape-tight landscape-no-border">
               <ProgressPanel route={route} />
             </div>
           )}

@@ -83,33 +83,33 @@ function ProgressPanel({ route }) {
   return (
     <div className="w-full">
       {/* Stats row: Time and Distance - centered in each half, matching progress bar margins */}
-      <div className="flex items-center mb-2" style={{ marginLeft: '10%', marginRight: '10%' }}>
+      <div className="flex items-center mb-2 landscape-tight landscape-gap-sm" style={{ marginLeft: '10%', marginRight: '10%' }}>
         {/* Time remaining - centered in left half */}
-        <div className="flex-1 flex flex-col items-center justify-center text-center">
-          <span className="text-xl sm:text-2xl">⏱️</span>
-          <div className="text-lg sm:text-xl font-bold text-gray-800">
+        <div className="flex-1 flex flex-col items-center justify-center text-center landscape-gap-sm">
+          <span className="text-xl sm:text-2xl landscape-emoji-xs">⏱️</span>
+          <div className="text-lg sm:text-xl font-bold text-gray-800 landscape-text-sm">
             {formatDuration(route.durationMinutes)}
           </div>
-          <div className="text-xs text-gray-500">Time left</div>
+          <div className="text-xs text-gray-500 landscape-text-xs">Time left</div>
         </div>
 
         {/* Divider line */}
         <div className="h-12 w-0.5 bg-gray-200 rounded-full" />
 
         {/* Distance remaining - centered in right half */}
-        <div className="flex-1 flex flex-col items-center justify-center text-center">
-          <span className="text-xl sm:text-2xl">📍</span>
-          <div className="text-lg sm:text-xl font-bold text-gray-800">
+        <div className="flex-1 flex flex-col items-center justify-center text-center landscape-gap-sm">
+          <span className="text-xl sm:text-2xl landscape-emoji-xs">📍</span>
+          <div className="text-lg sm:text-xl font-bold text-gray-800 landscape-text-sm">
             {formatDistance(route.distanceMiles)}
           </div>
-          <div className="text-xs text-gray-500">To go</div>
+          <div className="text-xs text-gray-500 landscape-text-xs">To go</div>
         </div>
       </div>
 
       {/* Progress bar - compact with 10% margins */}
       <div className="relative" style={{ marginLeft: '10%', marginRight: '10%' }}>
         {/* Background track */}
-        <div className="h-4 bg-gray-100 rounded-full overflow-visible border border-gray-200">
+        <div className="h-4 landscape-progress-bar bg-gray-100 rounded-full overflow-visible border border-gray-200">
           {/* Filled portion - gradient for fun */}
           <div
             className="h-full bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 rounded-full transition-all duration-700 ease-out"
@@ -122,25 +122,25 @@ function ProgressPanel({ route }) {
           className="absolute top-1/2 -translate-y-1/2 transition-all duration-700 ease-out"
           style={{ left: `calc(${Math.min(progress, 92)}%)` }}
         >
-          <span className="text-4xl inline-block" style={{ transform: 'scaleX(-1)' }}>🚗</span>
+          <span className="text-4xl landscape-car-sm inline-block" style={{ transform: 'scaleX(-1)' }}>🚗</span>
         </div>
 
         {/* Finish flag at end */}
         <div className="absolute top-1/2 -translate-y-1/2 -right-1">
-          <span className="text-3xl">🏁</span>
+          <span className="text-3xl landscape-flag-sm">🏁</span>
         </div>
       </div>
 
       {/* Progress percentage and message - single line */}
-      <div className="text-center mt-2 flex items-center justify-center gap-2">
-        <span className="text-2xl">
+      <div className="text-center mt-2 landscape-tight flex items-center justify-center gap-2 landscape-gap-sm">
+        <span className="text-2xl landscape-emoji-sm">
           {progress < 25 && '🚀'}
           {progress >= 25 && progress < 50 && '⭐'}
           {progress >= 50 && progress < 75 && '🎉'}
           {progress >= 75 && progress < 95 && '🌟'}
           {progress >= 95 && '🏁'}
         </span>
-        <span className="text-sm font-semibold text-gray-600">
+        <span className="text-sm font-semibold text-gray-600 landscape-text-xs">
           {Math.round(progress)}% complete
         </span>
       </div>

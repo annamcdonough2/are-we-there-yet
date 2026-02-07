@@ -362,10 +362,10 @@ function FunFactCard({ position, isActive, destination, route }) {
   // Don't show anything if not active or no fact yet
   if (!isActive) {
     return (
-      <div className="bg-white rounded-3xl shadow-xl py-5 sm:py-6">
-        <div className="flex items-center justify-center gap-4">
-          <span className="text-4xl">✨</span>
-          <p className="text-lg text-gray-600 font-medium">
+      <div className="bg-white rounded-3xl shadow-xl py-5 sm:py-6 landscape-compact">
+        <div className="flex items-center justify-center gap-4 landscape-gap-sm">
+          <span className="text-4xl landscape-emoji-sm">✨</span>
+          <p className="text-lg text-gray-600 font-medium landscape-text-sm">
             Enter a destination to start your trip!
           </p>
         </div>
@@ -376,10 +376,10 @@ function FunFactCard({ position, isActive, destination, route }) {
   // Loading state
   if (isLoading && !funFact) {
     return (
-      <div className="bg-white rounded-3xl shadow-xl py-5 sm:py-6">
-        <div className="flex items-center gap-4" style={{ marginLeft: '10%', marginRight: '10%' }}>
-          <span className="text-4xl animate-bounce">🔍</span>
-          <p className="text-lg text-gray-600 font-medium">
+      <div className="bg-white rounded-3xl shadow-xl py-5 sm:py-6 landscape-compact">
+        <div className="flex items-center gap-4 landscape-gap-sm" style={{ marginLeft: '10%', marginRight: '10%' }}>
+          <span className="text-4xl animate-bounce landscape-emoji-sm">🔍</span>
+          <p className="text-lg text-gray-600 font-medium landscape-text-sm">
             Looking for fun facts nearby...
           </p>
         </div>
@@ -430,22 +430,22 @@ function FunFactCard({ position, isActive, destination, route }) {
   // Show the fun fact
   return (
     <div
-      className={`bg-white rounded-3xl shadow-xl px-6
+      className={`bg-white rounded-3xl shadow-xl px-6 landscape-compact
                   transition-all duration-300 ease-out
                   ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
       style={{ paddingTop: '12px', paddingBottom: '12px' }}
     >
       {/* Header row */}
-      <div className="flex flex-col items-center justify-center text-center mb-3">
-        <div className="flex items-center gap-3">
-          <span className="text-4xl">🎉</span>
-          <span className="text-xl font-bold text-purple-600">Fun Fact!</span>
+      <div className="flex flex-col items-center justify-center text-center mb-3 landscape-tight">
+        <div className="flex items-center gap-3 landscape-gap-sm">
+          <span className="text-4xl landscape-emoji-sm">🎉</span>
+          <span className="text-xl font-bold text-purple-600 landscape-text-sm">Fun Fact!</span>
         </div>
       </div>
 
       {/* The fun fact text */}
       <p
-        className="text-gray-700 text-lg sm:text-xl leading-relaxed text-center"
+        className="text-gray-700 text-lg sm:text-xl leading-relaxed text-center landscape-text-sm"
         style={{ marginLeft: '10%', marginRight: '10%' }}
       >
         {funFact || "🚗 You're on an adventure! Fun facts coming soon..."}
@@ -453,21 +453,21 @@ function FunFactCard({ position, isActive, destination, route }) {
 
       {/* Loading indicator for new facts */}
       {isLoading && funFact && (
-        <div className="mt-3 flex items-center justify-center gap-2 text-purple-500">
-          <span className="text-2xl animate-spin">⏳</span>
-          <span className="font-medium">Getting new fact...</span>
+        <div className="mt-3 landscape-tight flex items-center justify-center gap-2 text-purple-500">
+          <span className="text-2xl landscape-emoji-sm animate-spin">⏳</span>
+          <span className="font-medium landscape-text-xs">Getting new fact...</span>
         </div>
       )}
 
       {/* Speaker buttons row */}
-      <div className="mt-4 flex justify-center gap-6">
+      <div className="mt-4 landscape-tight flex justify-center gap-6 landscape-gap-sm">
         {isSpeechSupported() ? (
           <>
             {/* Read Aloud button */}
             <button
               onClick={handleSpeak}
               disabled={!funFact || isSpeaking}
-              className={`flex items-center gap-3 py-3 rounded-full font-semibold
+              className={`flex items-center gap-3 landscape-gap-sm py-3 landscape-btn-compact rounded-full font-semibold
                          transition-all duration-200 active:scale-95
                          ${isSpeaking
                            ? 'bg-gray-300 text-gray-500'
@@ -475,15 +475,15 @@ function FunFactCard({ position, isActive, destination, route }) {
                          ${!funFact ? 'opacity-50 cursor-not-allowed' : ''}`}
               style={{ paddingLeft: '16px', paddingRight: '24px' }}
             >
-              <span className="text-2xl">🔊</span>
-              <span>Read Aloud</span>
+              <span className="text-2xl landscape-emoji-sm">🔊</span>
+              <span className="landscape-text-xs">Read Aloud</span>
             </button>
 
             {/* When will we be there button */}
             <button
               onClick={handleSpeakProgress}
               disabled={!route || isSpeaking}
-              className={`flex items-center gap-3 py-3 rounded-full font-semibold
+              className={`flex items-center gap-3 landscape-gap-sm py-3 landscape-btn-compact rounded-full font-semibold
                          transition-all duration-200 active:scale-95
                          ${isSpeaking
                            ? 'bg-gray-300 text-gray-500'
@@ -491,8 +491,8 @@ function FunFactCard({ position, isActive, destination, route }) {
                          ${!route ? 'opacity-50 cursor-not-allowed' : ''}`}
               style={{ paddingLeft: '16px', paddingRight: '24px' }}
             >
-              <span className="text-2xl">🗣️</span>
-              <span>When will we be there?!</span>
+              <span className="text-2xl landscape-emoji-sm">🗣️</span>
+              <span className="landscape-text-xs">When will we be there?!</span>
             </button>
           </>
         ) : (
@@ -504,13 +504,13 @@ function FunFactCard({ position, isActive, destination, route }) {
 
       {/* Speaking indicator */}
       {isSpeaking && (
-        <div className="mt-4 flex items-center justify-center gap-3">
+        <div className="mt-4 landscape-tight flex items-center justify-center gap-3 landscape-gap-sm">
           <span className="flex gap-1">
-            <span className="text-2xl animate-bounce" style={{ animationDelay: '0ms' }}>🔊</span>
-            <span className="text-2xl animate-bounce" style={{ animationDelay: '150ms' }}>🔊</span>
-            <span className="text-2xl animate-bounce" style={{ animationDelay: '300ms' }}>🔊</span>
+            <span className="text-2xl landscape-emoji-sm animate-bounce" style={{ animationDelay: '0ms' }}>🔊</span>
+            <span className="text-2xl landscape-emoji-sm animate-bounce" style={{ animationDelay: '150ms' }}>🔊</span>
+            <span className="text-2xl landscape-emoji-sm animate-bounce" style={{ animationDelay: '300ms' }}>🔊</span>
           </span>
-          <span className="text-purple-600 font-medium">Reading aloud...</span>
+          <span className="text-purple-600 font-medium landscape-text-xs">Reading aloud...</span>
         </div>
       )}
     </div>

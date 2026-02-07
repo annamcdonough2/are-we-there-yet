@@ -44,6 +44,86 @@ body {
   }
 }
 
+/* Mobile landscape mode - compact everything */
+@media (orientation: landscape) and (max-height: 500px) {
+  /* Hide elements completely in landscape */
+  .landscape-hide {
+    display: none !important;
+  }
+
+  /* Smaller padding for cards */
+  .landscape-compact {
+    padding-top: 6px !important;
+    padding-bottom: 6px !important;
+  }
+
+  /* Smaller text */
+  .landscape-text-sm {
+    font-size: 0.875rem !important;
+    line-height: 1.25 !important;
+  }
+
+  /* Extra small text */
+  .landscape-text-xs {
+    font-size: 0.75rem !important;
+  }
+
+  /* Smaller emojis */
+  .landscape-emoji-sm {
+    font-size: 1.25rem !important;
+  }
+
+  /* Extra small emojis */
+  .landscape-emoji-xs {
+    font-size: 1rem !important;
+  }
+
+  /* Reduce button sizes */
+  button {
+    min-height: 32px;
+    min-width: 32px;
+  }
+
+  /* Compact buttons */
+  .landscape-btn-compact {
+    padding-top: 0.25rem !important;
+    padding-bottom: 0.25rem !important;
+  }
+
+  /* Tighter margins */
+  .landscape-tight {
+    margin-top: 0.125rem !important;
+    margin-bottom: 0.125rem !important;
+  }
+
+  /* Smaller progress bar */
+  .landscape-progress-bar {
+    height: 0.5rem !important;
+  }
+
+  /* Smaller car emoji on progress bar */
+  .landscape-car-sm {
+    font-size: 1.5rem !important;
+  }
+
+  /* Smaller flag emoji */
+  .landscape-flag-sm {
+    font-size: 1.25rem !important;
+  }
+
+  /* Reduce gaps */
+  .landscape-gap-sm {
+    gap: 0.25rem !important;
+  }
+
+  /* Remove borders in landscape */
+  .landscape-no-border {
+    border-top: none !important;
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+  }
+}
+
 /* Safe area for phones with notches */
 @supports (padding: max(0px)) {
   .safe-area-bottom {
