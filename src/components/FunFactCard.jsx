@@ -36,6 +36,9 @@ function FunFactCard({ position, isActive, destination, route }) {
   // Animation state
   const [isVisible, setIsVisible] = useState(false)
 
+  // Is the card collapsed (just showing emoji buttons)?
+  const [isCollapsed, setIsCollapsed] = useState(false)
+
   // Is the speech currently playing?
   const [isSpeaking, setIsSpeaking] = useState(false)
 
@@ -119,6 +122,7 @@ function FunFactCard({ position, isActive, destination, route }) {
         setLastPlace(shortPlace)
         setIsLoading(false)
         setIsVisible(true)
+        setIsCollapsed(false)  // Expand when new fact arrives
 
       } catch (error) {
         console.error('Error fetching destination fun fact:', error)
@@ -259,6 +263,7 @@ function FunFactCard({ position, isActive, destination, route }) {
 
         // Animate in the new fact
         setIsVisible(true)
+        setIsCollapsed(false)  // Expand when new fact arrives
 
         // Auto-read the new fun fact
         if (isSpeechSupported()) {
@@ -283,6 +288,22 @@ function FunFactCard({ position, isActive, destination, route }) {
 
     return () => clearTimeout(timeoutId)
   }, [position, isActive, lastPlace])
+
+  // ============================================================
+  // EFFECT: Auto-collapse card after speech ends
+  // ============================================================
+
+  useEffect(() => {
+    // Only auto-collapse if visible, not speaking, and has a fun fact
+    if (!isVisible || isSpeaking || !funFact || isCollapsed) return
+
+    // Collapse after 8 seconds of inactivity
+    const collapseTimer = setTimeout(() => {
+      setIsCollapsed(true)
+    }, 8000)
+
+    return () => clearTimeout(collapseTimer)
+  }, [isVisible, isSpeaking, funFact, isCollapsed])
 
   // ============================================================
   // HANDLERS
@@ -372,6 +393,46 @@ function FunFactCard({ position, isActive, destination, route }) {
             Looking for fun facts nearby...
           </p>
         </div>
+      </div>
+    )
+  }
+
+  // Collapsed state - just show emoji buttons
+  if (isCollapsed && funFact) {
+    return (
+      <div className="flex justify-center gap-4">
+        {/* Read last fun fact button */}
+        <button
+          onClick={() => {
+            setIsCollapsed(false)
+            handleSpeak()
+          }}
+          disabled={isSpeaking}
+          className={`w-14 h-14 rounded-full shadow-lg flex items-center justify-center
+                     transition-all duration-200 active:scale-95
+                     ${isSpeaking
+                       ? 'bg-gray-300'
+                       : 'bg-white hover:bg-gray-50'}`}
+        >
+          <span className="text-3xl">🔊</span>
+        </button>
+
+        {/* When will we be there button */}
+        <button
+          onClick={() => {
+            setIsCollapsed(false)
+            handleSpeakProgress()
+          }}
+          disabled={!route || isSpeaking}
+          className={`w-14 h-14 rounded-full shadow-lg flex items-center justify-center
+                     transition-all duration-200 active:scale-95
+                     ${isSpeaking
+                       ? 'bg-gray-300'
+                       : 'bg-white hover:bg-gray-50'}
+                     ${!route ? 'opacity-50 cursor-not-allowed' : ''}`}
+        >
+          <span className="text-3xl">🗣️</span>
+        </button>
       </div>
     )
   }

@@ -63,6 +63,9 @@ function DestinationInput({ onDestinationSelect, userLocation }) {
   // The selected destination (once they pick one)
   const [selectedPlace, setSelectedPlace] = useState(null)
 
+  // Show the "Let's go!" confirmation bar (auto-hides after 2 seconds)
+  const [showConfirmation, setShowConfirmation] = useState(false)
+
   // Reference to the input container (for detecting clicks outside)
   const containerRef = useRef(null)
 
@@ -104,6 +107,17 @@ function DestinationInput({ onDestinationSelect, userLocation }) {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  // Auto-hide the "Let's go!" confirmation after 2 seconds
+  useEffect(() => {
+    if (!showConfirmation) return
+
+    const timer = setTimeout(() => {
+      setShowConfirmation(false)
+    }, 2000)
+
+    return () => clearTimeout(timer)
+  }, [showConfirmation])
+
   // ============================================================
   // EVENT HANDLERS
   // ============================================================
@@ -126,6 +140,7 @@ function DestinationInput({ onDestinationSelect, userLocation }) {
       // Fetch full details including coordinates
       const place = await retrievePlaceDetails(suggestion.id)
       setSelectedPlace(place)
+      setShowConfirmation(true)  // Show "Let's go!" bar
       // Tell the parent component about the selection
       onDestinationSelect(place)
     } catch (error) {
@@ -225,10 +240,10 @@ function DestinationInput({ onDestinationSelect, userLocation }) {
         </ul>
       )}
 
-      {/* Selected destination confirmation */}
-      {selectedPlace && (
+      {/* Selected destination confirmation - auto-hides after 2 seconds */}
+      {showConfirmation && (
         <div className="mt-4 p-4 bg-green-50 border-2 border-green-200 rounded-2xl
-                        flex items-center gap-3">
+                        flex items-center gap-3 animate-fade-in">
           <span className="text-3xl">✅</span>
           <span className="text-green-700 font-medium">
             Let's go! Route is on the map.

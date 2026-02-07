@@ -1,82 +1,173 @@
 /**
- * speech.js - Text-to-speech using the Web Speech API
+ * speech.js - Text-to-speech using OpenAI TTS API
  *
  * WHAT THIS FILE DOES:
- * Reads text aloud using your device's built-in voice.
- * No API key needed - this is built into all modern browsers!
+ * Reads text aloud using OpenAI's natural-sounding voices.
+ * Audio is generated server-side to keep the API key secure.
  *
- * HOW IT WORKS (Plain English):
- * 1. We create a "speech utterance" (the text to speak)
- * 2. We set the voice, speed, and pitch
- * 3. The browser's speech engine reads it aloud
+ * HOW IT WORKS:
+ * 1. Send text to our /api/speak endpoint
+ * 2. Server calls OpenAI TTS and returns MP3 audio
+ * 3. Play the audio using HTML5 Audio element
  *
- * BROWSER SUPPORT:
- * Works in Chrome, Safari, Firefox, and Edge.
- * On phones/tablets, uses the device's voice (like Siri or Google Assistant).
+ * AVAILABLE VOICES:
+ * - nova (default) - Friendly female voice
+ * - alloy - Neutral
+ * - echo - Male
+ * - fable - British accent
+ * - onyx - Deep male
+ * - shimmer - Soft female
  */
+
+// Current audio element for playback control
+let currentAudio = null
+
+// Queue for managing speech requests
+let speechQueue = []
+let isProcessingQueue = false
 
 /**
  * Check if text-to-speech is supported
+ * Always true since we use OpenAI API (with Web Speech fallback)
  * @returns {boolean}
  */
 export function isSpeechSupported() {
-  return 'speechSynthesis' in window
+  return true
 }
 
 /**
- * Speak text aloud
+ * Speak text aloud using OpenAI TTS
  *
  * @param {string} text - The text to read
  * @param {Object} options - Optional settings
- * @param {number} options.rate - Speed (0.5 = slow, 1 = normal, 2 = fast)
- * @param {number} options.pitch - Pitch (0.5 = low, 1 = normal, 2 = high)
+ * @param {string} options.voice - Voice to use (nova, alloy, echo, fable, onyx, shimmer)
  * @returns {Promise} - Resolves when done speaking
  */
 export function speak(text, options = {}) {
   return new Promise((resolve, reject) => {
-    // Check if speech is supported
-    if (!isSpeechSupported()) {
-      reject(new Error('Text-to-speech is not supported in this browser'))
+    // Add to queue and process
+    speechQueue.push({ text, options, resolve, reject })
+    processQueue()
+  })
+}
+
+/**
+ * Process the speech queue one at a time
+ */
+async function processQueue() {
+  if (isProcessingQueue || speechQueue.length === 0) {
+    return
+  }
+
+  isProcessingQueue = true
+
+  // Stop any currently playing audio
+  if (currentAudio) {
+    currentAudio.pause()
+    currentAudio = null
+  }
+
+  // Get next item from queue (and clear any older items)
+  // We only want to speak the most recent request
+  const item = speechQueue[speechQueue.length - 1]
+
+  // Reject any skipped items
+  for (let i = 0; i < speechQueue.length - 1; i++) {
+    speechQueue[i].resolve() // Resolve silently (don't reject - not an error)
+  }
+  speechQueue = []
+
+  const { text, options, resolve, reject } = item
+
+  try {
+    const audio = await fetchAndPlayAudio(text, options)
+    currentAudio = audio
+
+    audio.onended = () => {
+      currentAudio = null
+      isProcessingQueue = false
+      resolve()
+      processQueue() // Process next in queue if any
+    }
+
+    audio.onerror = (error) => {
+      currentAudio = null
+      isProcessingQueue = false
+      console.error('Audio playback error:', error)
+      // Fall back to Web Speech API
+      fallbackToWebSpeech(text, options).then(resolve).catch(reject)
+    }
+
+  } catch (error) {
+    console.error('OpenAI TTS error, falling back to Web Speech:', error)
+    isProcessingQueue = false
+    // Fall back to Web Speech API
+    fallbackToWebSpeech(text, options).then(resolve).catch(reject)
+  }
+}
+
+/**
+ * Fetch audio from OpenAI TTS API and play it
+ */
+async function fetchAndPlayAudio(text, options = {}) {
+  const voice = options.voice || 'nova'
+
+  const response = await fetch('/api/speak', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ text, voice })
+  })
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}))
+    throw new Error(errorData.error || 'Failed to generate speech')
+  }
+
+  // Get audio blob and create URL
+  const audioBlob = await response.blob()
+  const audioUrl = URL.createObjectURL(audioBlob)
+
+  // Create and play audio
+  const audio = new Audio(audioUrl)
+
+  // Clean up blob URL when done
+  audio.onended = () => URL.revokeObjectURL(audioUrl)
+  audio.onerror = () => URL.revokeObjectURL(audioUrl)
+
+  // Play the audio
+  await audio.play()
+
+  return audio
+}
+
+/**
+ * Fallback to Web Speech API if OpenAI TTS fails
+ */
+function fallbackToWebSpeech(text, options = {}) {
+  return new Promise((resolve, reject) => {
+    if (!('speechSynthesis' in window)) {
+      reject(new Error('Text-to-speech is not supported'))
       return
     }
 
-    // Stop any current speech
     window.speechSynthesis.cancel()
 
-    // Create the speech utterance
     const utterance = new SpeechSynthesisUtterance(text)
+    utterance.rate = options.rate || 0.9
+    utterance.pitch = options.pitch || 1.1
+    utterance.volume = options.volume || 1
 
-    // Configure the voice settings
-    utterance.rate = options.rate || 0.9      // Slightly slower for kids
-    utterance.pitch = options.pitch || 1.1    // Slightly higher, friendlier
-    utterance.volume = options.volume || 1    // Full volume
-
-    // Try to find a friendly-sounding voice
+    // Try to find a good voice
     const voices = window.speechSynthesis.getVoices()
-
-    // Priority order: Female Enhanced/Neural voices first
     const preferredVoices = [
-      // macOS Enhanced female voices (sound very natural)
-      'Samantha (Enhanced)',
-      'Karen (Enhanced)',
-
-      // Windows 11 Neural female voices (very natural)
-      'Microsoft Aria',
-      'Microsoft Jenny',
-
-      // macOS standard female voices
-      'Samantha',
-      'Karen',
-      'Victoria',
-
-      // Windows standard female voice
-      'Microsoft Zira',
-
-      // Chrome fallback
-      'Google US English',
+      'Samantha (Enhanced)', 'Karen (Enhanced)',
+      'Microsoft Aria', 'Microsoft Jenny',
+      'Samantha', 'Karen', 'Victoria',
+      'Microsoft Zira', 'Google US English'
     ]
 
-    // Find the first available preferred voice
     for (const preferred of preferredVoices) {
       const voice = voices.find(v => v.name.includes(preferred))
       if (voice) {
@@ -85,11 +176,9 @@ export function speak(text, options = {}) {
       }
     }
 
-    // Event handlers
     utterance.onend = () => resolve()
     utterance.onerror = (event) => reject(event.error)
 
-    // Start speaking!
     window.speechSynthesis.speak(utterance)
   })
 }
@@ -98,7 +187,20 @@ export function speak(text, options = {}) {
  * Stop speaking immediately
  */
 export function stopSpeaking() {
-  if (isSpeechSupported()) {
+  // Clear the queue
+  speechQueue.forEach(item => item.resolve())
+  speechQueue = []
+  isProcessingQueue = false
+
+  // Stop HTML5 Audio
+  if (currentAudio) {
+    currentAudio.pause()
+    currentAudio.currentTime = 0
+    currentAudio = null
+  }
+
+  // Also stop Web Speech API (in case fallback is playing)
+  if ('speechSynthesis' in window) {
     window.speechSynthesis.cancel()
   }
 }
@@ -108,24 +210,36 @@ export function stopSpeaking() {
  * @returns {boolean}
  */
 export function isSpeaking() {
-  if (!isSpeechSupported()) return false
-  return window.speechSynthesis.speaking
+  if (currentAudio && !currentAudio.paused) {
+    return true
+  }
+  if ('speechSynthesis' in window && window.speechSynthesis.speaking) {
+    return true
+  }
+  return false
 }
 
 /**
- * Load voices (some browsers need this)
- * Call this early so voices are ready
+ * Load voices - no longer needed for OpenAI TTS
+ * Kept for compatibility
  */
 export function loadVoices() {
-  if (!isSpeechSupported()) return
-
-  // Some browsers load voices asynchronously
-  window.speechSynthesis.getVoices()
-
-  // Chrome needs this event listener
-  if (window.speechSynthesis.onvoiceschanged !== undefined) {
-    window.speechSynthesis.onvoiceschanged = () => {
-      window.speechSynthesis.getVoices()
+  // No-op for OpenAI TTS, but load Web Speech voices for fallback
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.getVoices()
+    if (window.speechSynthesis.onvoiceschanged !== undefined) {
+      window.speechSynthesis.onvoiceschanged = () => {
+        window.speechSynthesis.getVoices()
+      }
     }
   }
+}
+
+/**
+ * Check if enhanced voices available - always true with OpenAI
+ * Kept for compatibility
+ * @returns {boolean}
+ */
+export function hasEnhancedVoice() {
+  return true
 }

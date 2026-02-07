@@ -55,7 +55,8 @@ export default async function handler(req, res) {
 Rules:
 - This is for 6-year-old children. ONLY share kid-safe, age-appropriate facts
 - NEVER mention alcoholic beverages (wine, beer, etc.), drugs, or anything explicit
-- Only share facts you are confident are true. Do not make up or guess information
+- ONLY share facts you are 100% certain are true. Do not make up or guess information
+- If you're not 100% certain about a specific fact for this place, give a general fact about the state or region that you ARE 100% sure is true
 - Focus on topics like: animals, nature, sports, history, food (kid-friendly), buildings, parks, fun records
 - Keep it under 2 sentences
 - Make it exciting and educational
