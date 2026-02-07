@@ -19,12 +19,31 @@
  * - shimmer - Soft female
  */
 
-// Current audio element for playback control
-let currentAudio = null
+// Persistent audio element - reused for all playback
+// Once "unlocked" by a user gesture, it stays unlocked for the session
+// This is critical for mobile Safari support
+let persistentAudio = null
+
+// Current blob URL (for cleanup)
+let currentBlobUrl = null
 
 // Queue for managing speech requests
 let speechQueue = []
 let isProcessingQueue = false
+
+/**
+ * Get or create the persistent audio element
+ * Reusing the same element keeps it "unlocked" on mobile Safari
+ */
+function getPersistentAudio() {
+  if (!persistentAudio) {
+    persistentAudio = new Audio()
+    // Set attributes that help with mobile playback
+    persistentAudio.setAttribute('playsinline', 'true')
+    persistentAudio.setAttribute('webkit-playsinline', 'true')
+  }
+  return persistentAudio
+}
 
 /**
  * Check if text-to-speech is supported
@@ -61,10 +80,10 @@ async function processQueue() {
 
   isProcessingQueue = true
 
-  // Stop any currently playing audio
-  if (currentAudio) {
-    currentAudio.pause()
-    currentAudio = null
+  // Stop any currently playing audio on the persistent element
+  const audio = getPersistentAudio()
+  if (!audio.paused) {
+    audio.pause()
   }
 
   // Get next item from queue (and clear any older items)
@@ -80,18 +99,15 @@ async function processQueue() {
   const { text, options, resolve, reject } = item
 
   try {
-    const audio = await fetchAndPlayAudio(text, options)
-    currentAudio = audio
+    await fetchAndPlayAudio(text, options)
 
     audio.onended = () => {
-      currentAudio = null
       isProcessingQueue = false
       resolve()
       processQueue() // Process next in queue if any
     }
 
     audio.onerror = (error) => {
-      currentAudio = null
       isProcessingQueue = false
       console.error('Audio playback error:', error)
       // Fall back to Web Speech API
@@ -125,18 +141,22 @@ async function fetchAndPlayAudio(text, options = {}) {
     throw new Error(errorData.error || 'Failed to generate speech')
   }
 
+  // Clean up previous blob URL if exists
+  if (currentBlobUrl) {
+    URL.revokeObjectURL(currentBlobUrl)
+    currentBlobUrl = null
+  }
+
   // Get audio blob and create URL
   const audioBlob = await response.blob()
   const audioUrl = URL.createObjectURL(audioBlob)
+  currentBlobUrl = audioUrl
 
-  // Create and play audio
-  const audio = new Audio(audioUrl)
+  // Get the persistent audio element (stays "unlocked" on mobile Safari)
+  const audio = getPersistentAudio()
 
-  // Clean up blob URL when done
-  audio.onended = () => URL.revokeObjectURL(audioUrl)
-  audio.onerror = () => URL.revokeObjectURL(audioUrl)
-
-  // Play the audio
+  // Set the new source and play
+  audio.src = audioUrl
   await audio.play()
 
   return audio
@@ -192,11 +212,16 @@ export function stopSpeaking() {
   speechQueue = []
   isProcessingQueue = false
 
-  // Stop HTML5 Audio
-  if (currentAudio) {
-    currentAudio.pause()
-    currentAudio.currentTime = 0
-    currentAudio = null
+  // Stop persistent audio element
+  if (persistentAudio) {
+    persistentAudio.pause()
+    persistentAudio.currentTime = 0
+  }
+
+  // Clean up blob URL
+  if (currentBlobUrl) {
+    URL.revokeObjectURL(currentBlobUrl)
+    currentBlobUrl = null
   }
 
   // Also stop Web Speech API (in case fallback is playing)
@@ -210,7 +235,7 @@ export function stopSpeaking() {
  * @returns {boolean}
  */
 export function isSpeaking() {
-  if (currentAudio && !currentAudio.paused) {
+  if (persistentAudio && !persistentAudio.paused) {
     return true
   }
   if ('speechSynthesis' in window && window.speechSynthesis.speaking) {

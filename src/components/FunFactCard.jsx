@@ -52,9 +52,9 @@ function FunFactCard({ position, isActive, destination, route }) {
   // Track if we've read the initial fun fact for current trip
   const hasReadInitialFactRef = useRef(false)
 
-  // Track if we're waiting to read the fun fact after announcement
-  // Using state so it triggers re-renders and effects
-  const [waitingForFact, setWaitingForFact] = useState(false)
+  // Ref to access current funFact value in async functions
+  // (needed for mobile Safari audio chaining)
+  const funFactRef = useRef(null)
 
   // ============================================================
   // EFFECT: Load voices when component mounts
@@ -73,9 +73,14 @@ function FunFactCard({ position, isActive, destination, route }) {
     if (!destination) {
       announcedDestinationRef.current = null
       hasReadInitialFactRef.current = false
-      setWaitingForFact(false)
     }
   }, [destination])
+
+  // Keep funFactRef in sync with funFact state
+  // This allows async functions to access the current value
+  useEffect(() => {
+    funFactRef.current = funFact
+  }, [funFact])
 
   // ============================================================
   // EFFECT: Fetch fun fact about DESTINATION when trip starts
@@ -167,11 +172,23 @@ function FunFactCard({ position, isActive, destination, route }) {
         // Read the trip announcement
         await speak(announcement)
 
-        // Wait 2 seconds before fun fact
-        await new Promise(resolve => setTimeout(resolve, 2000))
+        // Wait 1 second before fun fact
+        await new Promise(resolve => setTimeout(resolve, 1000))
 
-        // Mark that we're ready for the fun fact (this triggers the next effect)
-        setWaitingForFact(true)
+        // Wait for fun fact to be available (mobile Safari requires
+        // both speak calls in the same async chain from user gesture)
+        let attempts = 0
+        while (!funFactRef.current && attempts < 20) {
+          await new Promise(resolve => setTimeout(resolve, 250))
+          attempts++
+        }
+
+        // Read the fun fact if available
+        if (funFactRef.current && !hasReadInitialFactRef.current) {
+          hasReadInitialFactRef.current = true
+          await speak(funFactRef.current)
+        }
+
         setIsSpeaking(false)
 
       } catch (error) {
@@ -183,33 +200,6 @@ function FunFactCard({ position, isActive, destination, route }) {
     announceTrip()
   }, [destination, route])
 
-  // ============================================================
-  // EFFECT: Auto-read fun fact after trip announcement
-  // ============================================================
-
-  useEffect(() => {
-    // Only run if we're waiting for a fun fact AND we have one
-    if (!waitingForFact || !funFact) return
-    if (hasReadInitialFactRef.current) return
-    if (!isSpeechSupported()) return
-
-    // Mark that we've read the initial fact
-    setWaitingForFact(false)
-    hasReadInitialFactRef.current = true
-
-    async function readFunFact() {
-      try {
-        setIsSpeaking(true)
-        await speak(funFact)
-        setIsSpeaking(false)
-      } catch (error) {
-        console.error('Error reading fun fact:', error)
-        setIsSpeaking(false)
-      }
-    }
-
-    readFunFact()
-  }, [waitingForFact, funFact])
 
   // ============================================================
   // EFFECT: Get fun facts when position changes significantly
