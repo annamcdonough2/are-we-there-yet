@@ -74,18 +74,16 @@ Rules:
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
+        'anthropic-version': '2025-01-01',
         'anthropic-dangerous-direct-browser-access': 'true'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1024,
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 4096,
         // Enable Claude's built-in web search tool
         tools: [
           {
-            type: 'web_search_20250305',
-            name: 'web_search',
-            max_uses: 3
+            type: 'web_search_20250305'
           }
         ],
         messages: [{ role: 'user', content: prompt }]
@@ -119,7 +117,7 @@ Rules:
     const result = JSON.parse(jsonText)
 
     return {
-      verified: result.verified === true && result.confidence >= 6,
+      verified: result.verified === true && result.confidence >= 5,
       confidence: result.confidence
     }
   } catch (error) {
