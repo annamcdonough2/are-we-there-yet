@@ -96,21 +96,6 @@ body {
     margin-bottom: 0.125rem !important;
   }
 
-  /* Smaller progress bar */
-  .landscape-progress-bar {
-    height: 0.5rem !important;
-  }
-
-  /* Smaller car emoji on progress bar */
-  .landscape-car-sm {
-    font-size: 1.5rem !important;
-  }
-
-  /* Smaller flag emoji */
-  .landscape-flag-sm {
-    font-size: 1.25rem !important;
-  }
-
   /* Reduce gaps */
   .landscape-gap-sm {
     gap: 0.25rem !important;
