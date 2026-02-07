@@ -11,11 +11,68 @@
  * This is the panel that answers "are we there yet?" with actual numbers!
  * The progress bar fills up as you get closer to your destination.
  * It's like a visual countdown that kids can understand.
+ *
+ * AUTO-ANNOUNCEMENTS:
+ * Every 15 minutes, it reads the progress aloud so kids know how close they are!
  */
 
+import { useEffect } from 'react'
 import { formatDuration, formatDistance } from '../services/mapbox'
+import { speak, isSpeechSupported } from '../services/speech'
+
+// How often to announce progress (15 minutes in milliseconds)
+const PROGRESS_ANNOUNCEMENT_INTERVAL = 15 * 60 * 1000
 
 function ProgressPanel({ route }) {
+  // ============================================================
+  // EFFECT: Announce progress every 15 minutes
+  // ============================================================
+
+  useEffect(() => {
+    if (!route || !isSpeechSupported()) return
+
+    const intervalId = setInterval(() => {
+      // Build the progress announcement
+      const progress = Math.round(route.progress || 0)
+      const timeLeft = route.durationMinutes
+      const milesLeft = route.distanceMiles
+
+      // Format time in a kid-friendly way
+      let timeText
+      if (timeLeft < 60) {
+        timeText = `${timeLeft} minutes`
+      } else {
+        const hours = Math.floor(timeLeft / 60)
+        const mins = timeLeft % 60
+        if (mins === 0) {
+          timeText = `${hours} ${hours === 1 ? 'hour' : 'hours'}`
+        } else {
+          timeText = `${hours} ${hours === 1 ? 'hour' : 'hours'} and ${mins} minutes`
+        }
+      }
+
+      // Build the announcement
+      let announcement
+      if (progress < 25) {
+        announcement = `We're ${progress}% of the way there! Still ${milesLeft} miles and about ${timeText} to go. The adventure is just beginning!`
+      } else if (progress < 50) {
+        announcement = `Great progress! We're ${progress}% there. Only ${milesLeft} miles and ${timeText} left!`
+      } else if (progress < 75) {
+        announcement = `We're over halfway there! ${progress}% complete with ${milesLeft} miles and ${timeText} to go!`
+      } else if (progress < 95) {
+        announcement = `Almost there! We're ${progress}% of the way. Just ${milesLeft} miles and ${timeText} left!`
+      } else {
+        announcement = `So close! We're ${progress}% there. Only ${milesLeft} miles to go!`
+      }
+
+      // Speak the announcement
+      speak(announcement).catch(err => console.error('Progress announcement error:', err))
+
+    }, PROGRESS_ANNOUNCEMENT_INTERVAL)
+
+    return () => clearInterval(intervalId)
+  }, [route])
+
   // If there's no route yet, don't show anything
   if (!route) return null
 

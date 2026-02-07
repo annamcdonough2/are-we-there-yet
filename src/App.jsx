@@ -118,6 +118,8 @@ function App() {
         <FunFactCard
           position={userPosition}
           isActive={destination !== null}
+          destination={destination}
+          route={route}
         />
       </footer>
     </div>

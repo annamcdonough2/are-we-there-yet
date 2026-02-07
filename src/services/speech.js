@@ -54,13 +54,26 @@ export function speak(text, options = {}) {
     // Try to find a friendly-sounding voice
     const voices = window.speechSynthesis.getVoices()
 
-    // Prefer these voices (they sound nice for kids)
+    // Priority order: Female Enhanced/Neural voices first
     const preferredVoices = [
-      'Samantha',     // macOS - friendly female voice
-      'Karen',        // macOS - Australian female
-      'Daniel',       // macOS - British male
-      'Google US English',  // Chrome
-      'Microsoft Zira',     // Windows
+      // macOS Enhanced female voices (sound very natural)
+      'Samantha (Enhanced)',
+      'Karen (Enhanced)',
+
+      // Windows 11 Neural female voices (very natural)
+      'Microsoft Aria',
+      'Microsoft Jenny',
+
+      // macOS standard female voices
+      'Samantha',
+      'Karen',
+      'Victoria',
+
+      // Windows standard female voice
+      'Microsoft Zira',
+
+      // Chrome fallback
+      'Google US English',
     ]
 
     // Find the first available preferred voice

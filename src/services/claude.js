@@ -33,16 +33,60 @@ const isProduction = !ANTHROPIC_API_KEY
  *   which keeps the API key secret on the server
  *
  * @param {string} placeName - Name of the place (e.g., "Springfield, Illinois")
+ * @param {boolean} isDestination - If true, this is the destination (use "heading to"), otherwise current location (use "in")
  * @returns {Promise<string>} - A fun fact about the place
  */
-export async function getFunFact(placeName) {
+export async function getFunFact(placeName, isDestination = false) {
+  // Build the appropriate prompt based on whether this is a destination or current location
+  const prompt = isDestination
+    ? `You are a fun, friendly guide for kids on a road trip. Tell them about ${placeName}, their destination, with an exciting fun fact!
+
+Rules:
+- This is for 6-year-old children. ONLY share kid-safe, age-appropriate facts
+- NEVER mention alcoholic beverages (wine, beer, etc.), drugs, or anything explicit
+- Only share facts you are confident are true. Do not make up or guess information
+- Focus on topics like: animals, nature, sports, history, food (kid-friendly), buildings, parks, fun records
+- Start with "You're heading to [city name]!" or "We're going to [city name]!" (just the city, not full address)
+- Then share ONE interesting fact about the place
+- End with an engaging question for the kids when possible
+- Keep it to 2-3 short sentences total
+- Use simple words a 6-year-old would understand
+- Include a relevant emoji at the start
+
+Examples:
+"🍎 You're heading to Campbell! Campbell is known as the Orchard City because it used to have lots of fruit trees. What do you know about orchards?"
+"🗼 We're going to Las Vegas! Did you know they have a mini Eiffel Tower that's half the size of the real one in Paris?"
+"🎢 You're heading to Orlando! This city has more theme parks than almost anywhere else in the world. What ride would you want to go on?"
+
+Now tell the kids about their destination, ${placeName}:`
+    : `You are a fun, friendly guide for kids on a road trip. Tell them about ${placeName} with an exciting fun fact!
+
+Rules:
+- This is for 6-year-old children. ONLY share kid-safe, age-appropriate facts
+- NEVER mention alcoholic beverages (wine, beer, etc.), drugs, or anything explicit
+- Only share facts you are confident are true. Do not make up or guess information
+- Focus on topics like: animals, nature, sports, history, food (kid-friendly), buildings, parks, fun records
+- Start with "You're in [city name]!" or "We're in [city name]!" (just the city, not full address)
+- Then share ONE interesting fact about the place
+- End with an engaging question for the kids when possible
+- Keep it to 2-3 short sentences total
+- Use simple words a 6-year-old would understand
+- Include a relevant emoji at the start
+
+Examples:
+"🍎 You're in Campbell, CA! Campbell is known as the Orchard City because it used to have lots of fruit trees. What do you know about orchards?"
+"🗼 We're in Las Vegas! Did you know they have a mini Eiffel Tower that's half the size of the real one in Paris?"
+"🎢 You're in Orlando! This city has more theme parks than almost anywhere else in the world. What ride would you want to go on?"
+
+Now tell the kids about ${placeName}:`
+
   try {
     // PRODUCTION: Use serverless function (keeps API key secret)
     if (isProduction) {
       const response = await fetch('/api/fun-fact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ placeName })
+        body: JSON.stringify({ placeName, isDestination })
       })
 
       if (!response.ok) {
@@ -69,18 +113,7 @@ export async function getFunFact(placeName) {
         messages: [
           {
             role: 'user',
-            content: `You are a fun, friendly guide for kids on a road trip. Give ONE short, interesting fun fact about ${placeName}.
-
-Rules:
-- Keep it under 2 sentences
-- Make it kid-friendly and exciting
-- Use simple words a 6-year-old would understand
-- Start with "Did you know?" or similar
-- Include an emoji at the start
-
-Example: "🦕 Did you know? Springfield has a dinosaur museum with real fossils that are millions of years old!"
-
-Now give a fun fact about ${placeName}:`
+            content: prompt
           }
         ]
       })
@@ -101,14 +134,19 @@ Now give a fun fact about ${placeName}:`
   } catch (error) {
     console.error('Error getting fun fact:', error)
 
-    // Return a generic fun fact if something goes wrong
-    return `🚗 You're on an adventure through ${placeName}! Keep your eyes open for cool things!`
+    // Return a friendly fallback if the API call fails
+    const cityName = placeName.split(',')[0].trim()
+    if (isDestination) {
+      return `🚗 You're heading to ${cityName}! Keep your eyes open for cool things on your adventure. What do you think you'll see there?`
+    }
+    return `🚗 You're in ${cityName}! Keep your eyes open for cool things on your adventure. What do you see outside?`
   }
 }
 
 /**
  * Get the name of a place from coordinates
  * Uses Mapbox reverse geocoding
+ * Prioritizes city ("place") over neighborhood/locality
  *
  * @param {[number, number]} coordinates - [longitude, latitude]
  * @returns {Promise<string|null>} - Place name or null
@@ -118,14 +156,28 @@ export async function getPlaceName(coordinates) {
 
   try {
     const [lng, lat] = coordinates
-    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?` +
-      `access_token=${MAPBOX_TOKEN}&types=place,locality,neighborhood&limit=1`
 
-    const response = await fetch(url)
-    const data = await response.json()
+    // First, try to get the city (place type)
+    const cityUrl = `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?` +
+      `access_token=${MAPBOX_TOKEN}&types=place&limit=1`
 
-    if (data.features && data.features.length > 0) {
-      return data.features[0].place_name
+    const cityResponse = await fetch(cityUrl)
+    const cityData = await cityResponse.json()
+
+    // If we found a city, use it
+    if (cityData.features && cityData.features.length > 0) {
+      return cityData.features[0].place_name
+    }
+
+    // Fallback: try locality and neighborhood if no city found
+    const fallbackUrl = `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?` +
+      `access_token=${MAPBOX_TOKEN}&types=locality,neighborhood&limit=1`
+
+    const fallbackResponse = await fetch(fallbackUrl)
+    const fallbackData = await fallbackResponse.json()
+
+    if (fallbackData.features && fallbackData.features.length > 0) {
+      return fallbackData.features[0].place_name
     }
 
     return null
