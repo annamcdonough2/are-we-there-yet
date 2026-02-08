@@ -256,50 +256,53 @@ function FunFactCard({ position, isActive, destination, route }) {
 
 
   // ============================================================
-  // EFFECT: Get fun facts when position changes significantly
+  // EFFECT: Get fun facts based on position, time, or distance
   // Triggers on: new city, 5 minutes elapsed, or 5 miles traveled
   // ============================================================
 
-  useEffect(() => {
-    // Only run if we have a position and tracking is active
-    if (!position || !isActive) return
+  // Track if we're currently fetching to prevent duplicate requests
+  const isFetchingRef = useRef(false)
 
-    // Don't run until the initial destination fact is ready
+  // The main fetch function - can be called by position change OR time interval
+  const fetchFunFactIfNeeded = async (currentPosition, forceTimeCheck = false) => {
+    // Prevent duplicate fetches
+    if (isFetchingRef.current) return
+    if (!currentPosition || !isActive) return
     if (!hasReadInitialFactRef.current) return
 
-    async function fetchFunFact() {
-      try {
-        // First, figure out what place we're near
-        const place = await getPlaceName(position)
+    try {
+      // First, figure out what place we're near
+      const place = await getPlaceName(currentPosition)
 
-        // If we couldn't get a place name, skip
-        if (!place) return
+      // If we couldn't get a place name, skip
+      if (!place) return
 
-        // Extract just the city/town name (first part before the comma)
-        const shortPlace = place.split(',')[0].trim()
+      // Extract just the city/town name (first part before the comma)
+      const shortPlace = place.split(',')[0].trim()
 
-        // Check if we should fetch a new fact based on:
-        // 1. New city/town
-        // 2. Time elapsed (5 minutes)
-        // 3. Distance traveled (5 miles)
-        const now = Date.now()
-        const timeSinceLastFact = lastFactTimeRef.current
-          ? (now - lastFactTimeRef.current) / 1000 / 60  // minutes
-          : Infinity
-        const distanceSinceLastFact = getDistanceMiles(lastFactPositionRef.current, position)
+      // Check if we should fetch a new fact based on:
+      // 1. New city/town
+      // 2. Time elapsed (5 minutes)
+      // 3. Distance traveled (5 miles)
+      const now = Date.now()
+      const timeSinceLastFact = lastFactTimeRef.current
+        ? (now - lastFactTimeRef.current) / 1000 / 60  // minutes
+        : Infinity
+      const distanceSinceLastFact = getDistanceMiles(lastFactPositionRef.current, currentPosition)
 
-        const isNewPlace = shortPlace !== lastPlace
-        const timeTriggered = timeSinceLastFact >= FACT_INTERVAL_MINUTES
-        const distanceTriggered = distanceSinceLastFact >= FACT_INTERVAL_MILES
+      const isNewPlace = shortPlace !== lastPlace
+      const timeTriggered = timeSinceLastFact >= FACT_INTERVAL_MINUTES
+      const distanceTriggered = distanceSinceLastFact >= FACT_INTERVAL_MILES
 
-        // Skip if none of the triggers are met
-        if (!isNewPlace && !timeTriggered && !distanceTriggered) return
+      // Skip if none of the triggers are met
+      if (!isNewPlace && !timeTriggered && !distanceTriggered) return
 
-        console.log(`[FunFact] Triggered by: ${isNewPlace ? 'new place' : ''} ${timeTriggered ? 'time' : ''} ${distanceTriggered ? 'distance' : ''}`)
+      console.log(`[FunFact] Triggered by: ${isNewPlace ? 'new place ' : ''}${timeTriggered ? 'time ' : ''}${distanceTriggered ? 'distance' : ''}`)
 
-        setIsLoading(true)
-        setLastPlace(shortPlace)
-        setLoadingStatus('Finding fun facts...')
+      isFetchingRef.current = true
+      setIsLoading(true)
+      setLastPlace(shortPlace)
+      setLoadingStatus('Finding fun facts...')
 
         // Only stop speech if we've already done the initial announcement
         // (don't interrupt the trip announcement!)
@@ -321,7 +324,7 @@ function FunFactCard({ position, isActive, destination, route }) {
 
         // Update tracking refs
         lastFactTimeRef.current = Date.now()
-        lastFactPositionRef.current = position
+        lastFactPositionRef.current = currentPosition
 
         if (result && result.fact) {
           setFunFact(result.fact)
@@ -352,19 +355,43 @@ function FunFactCard({ position, isActive, destination, route }) {
 
         setIsLoading(false)
         setLoadingStatus('')
+        isFetchingRef.current = false
 
       } catch (error) {
         console.error('Error fetching fun fact:', error)
         setIsLoading(false)
         setLoadingStatus('')
+        isFetchingRef.current = false
       }
     }
+  }
+
+  // Effect: Check on position changes
+  useEffect(() => {
+    if (!position || !isActive) return
+    if (!hasReadInitialFactRef.current) return
 
     // Debounce: wait a bit before fetching to avoid too many requests
-    const timeoutId = setTimeout(fetchFunFact, 2000)
+    const timeoutId = setTimeout(() => {
+      fetchFunFactIfNeeded(position)
+    }, 2000)
 
     return () => clearTimeout(timeoutId)
   }, [position, isActive, lastPlace])
+
+  // Effect: Check periodically for time-based triggers (every 30 seconds)
+  useEffect(() => {
+    if (!isActive || !hasReadInitialFactRef.current) return
+
+    const intervalId = setInterval(() => {
+      console.log('[FunFact] Time check interval running...')
+      if (position) {
+        fetchFunFactIfNeeded(position)
+      }
+    }, 30000) // Check every 30 seconds
+
+    return () => clearInterval(intervalId)
+  }, [isActive, position])
 
   // ============================================================
   // EFFECT: Auto-collapse card after speech ends
