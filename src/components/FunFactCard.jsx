@@ -81,6 +81,9 @@ function FunFactCard({ position, isActive, destination, route }) {
   // Track if we've read the initial fun fact for current trip
   const hasReadInitialFactRef = useRef(false)
 
+  // Track if we've SPOKEN the initial fun fact (separate from hasReadInitialFactRef)
+  const hasSpokenInitialFactRef = useRef(false)
+
   // Ref to access current funFact value in async functions
   // (needed for mobile Safari audio chaining)
   const funFactRef = useRef(null)
@@ -108,6 +111,7 @@ function FunFactCard({ position, isActive, destination, route }) {
     if (!destination) {
       announcedDestinationRef.current = null
       hasReadInitialFactRef.current = false
+      hasSpokenInitialFactRef.current = false
     }
   }, [destination])
 
@@ -249,8 +253,8 @@ function FunFactCard({ position, isActive, destination, route }) {
         }
 
         // Read the fun fact if available
-        if (funFactRef.current && !hasReadInitialFactRef.current) {
-          hasReadInitialFactRef.current = true
+        if (funFactRef.current && !hasSpokenInitialFactRef.current) {
+          hasSpokenInitialFactRef.current = true
           await speak(funFactRef.current)
         }
 
@@ -312,9 +316,9 @@ function FunFactCard({ position, isActive, destination, route }) {
       setLastPlace(shortPlace)
       setLoadingStatus('Finding fun facts...')
 
-        // Only stop speech if we've already done the initial announcement
+        // Only stop speech if we've already SPOKEN the initial fact
         // (don't interrupt the trip announcement!)
-        if (hasReadInitialFactRef.current) {
+        if (hasSpokenInitialFactRef.current) {
           stopSpeaking()
           setIsSpeaking(false)
         }
