@@ -85,6 +85,12 @@ function FunFactCard({ position, isActive, destination, route }) {
   // (needed for mobile Safari audio chaining)
   const funFactRef = useRef(null)
 
+  // Refs to avoid stale closures in interval callbacks
+  const positionRef = useRef(position)
+  const isActiveRef = useRef(isActive)
+  const lastPlaceRef = useRef(lastPlace)
+  const isFetchingRef = useRef(false)
+
   // ============================================================
   // EFFECT: Load voices when component mounts
   // ============================================================
@@ -206,9 +212,8 @@ function FunFactCard({ position, isActive, destination, route }) {
     // Check if we've already announced this destination
     if (announcedDestinationRef.current === destination.id) return
 
-    // Mark as announced
+    // Mark as announced (but don't reset hasReadInitialFactRef - that's handled by fetchDestinationFact)
     announcedDestinationRef.current = destination.id
-    hasReadInitialFactRef.current = false
 
     async function announceTrip() {
       try {
@@ -264,10 +269,10 @@ function FunFactCard({ position, isActive, destination, route }) {
   const isFetchingRef = useRef(false)
 
   // The main fetch function - can be called by position change OR time interval
-  const fetchFunFactIfNeeded = async (currentPosition, forceTimeCheck = false) => {
+  const fetchFunFactIfNeeded = async (currentPosition) => {
     // Prevent duplicate fetches
     if (isFetchingRef.current) return
-    if (!currentPosition || !isActive) return
+    if (!currentPosition || !isActiveRef.current) return
     if (!hasReadInitialFactRef.current) return
 
     try {
@@ -290,7 +295,7 @@ function FunFactCard({ position, isActive, destination, route }) {
         : Infinity
       const distanceSinceLastFact = getDistanceMiles(lastFactPositionRef.current, currentPosition)
 
-      const isNewPlace = shortPlace !== lastPlace
+      const isNewPlace = shortPlace !== lastPlaceRef.current
       const timeTriggered = timeSinceLastFact >= FACT_INTERVAL_MINUTES
       const distanceTriggered = distanceSinceLastFact >= FACT_INTERVAL_MILES
 
@@ -379,19 +384,37 @@ function FunFactCard({ position, isActive, destination, route }) {
     return () => clearTimeout(timeoutId)
   }, [position, isActive, lastPlace])
 
+  // Keep refs updated for use in interval (avoids stale closures)
+  useEffect(() => { positionRef.current = position }, [position])
+  useEffect(() => { isActiveRef.current = isActive }, [isActive])
+  useEffect(() => { lastPlaceRef.current = lastPlace }, [lastPlace])
+
   // Effect: Check periodically for time-based triggers (every 30 seconds)
   useEffect(() => {
-    if (!isActive || !hasReadInitialFactRef.current) return
+    // Always create interval, but check conditions inside callback
+    const intervalId = setInterval(async () => {
+      // Check conditions using refs (fresh values)
+      if (!isActiveRef.current) return
+      if (!hasReadInitialFactRef.current) return
+      if (!positionRef.current) return
+      if (isFetchingRef.current) return
 
-    const intervalId = setInterval(() => {
       console.log('[FunFact] Time check interval running...')
-      if (position) {
-        fetchFunFactIfNeeded(position)
+
+      // Check if 5 minutes have passed
+      const now = Date.now()
+      const timeSinceLastFact = lastFactTimeRef.current
+        ? (now - lastFactTimeRef.current) / 1000 / 60
+        : Infinity
+
+      if (timeSinceLastFact >= FACT_INTERVAL_MINUTES) {
+        console.log(`[FunFact] Time trigger: ${timeSinceLastFact.toFixed(1)} minutes elapsed`)
+        fetchFunFactIfNeeded(positionRef.current)
       }
     }, 30000) // Check every 30 seconds
 
     return () => clearInterval(intervalId)
-  }, [isActive, position])
+  }, []) // Empty deps - interval runs for component lifetime
 
   // ============================================================
   // EFFECT: Auto-collapse card after speech ends
