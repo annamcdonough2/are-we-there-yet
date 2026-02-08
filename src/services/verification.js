@@ -1,16 +1,14 @@
 /**
- * verification.js - Verifies fun facts using Claude's web search
+ * verification.js - Verifies fun facts using Claude's self-assessment
  *
  * WHAT THIS FILE DOES:
- * Takes a fun fact and uses Claude's built-in web search tool to verify it's accurate.
- * Returns whether the fact could be verified.
+ * Asks Claude to rate its confidence in a fun fact.
+ * Fast and cheap - no web search needed.
  *
  * HOW IT WORKS:
- * 1. Send the fun fact to Claude with web search enabled
- * 2. Claude searches the web to find evidence
- * 3. Claude analyzes search results and determines if the fact is accurate
- *
- * USES: Anthropic's built-in web search tool (no additional API keys needed)
+ * 1. Send the fun fact to Claude
+ * 2. Ask Claude to rate confidence 1-10
+ * 3. If confidence >= 7, mark as verified
  */
 
 // Get API key from environment
@@ -20,40 +18,33 @@ const ANTHROPIC_API_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY
 const isProduction = !ANTHROPIC_API_KEY
 
 /**
- * Verify a fun fact using Claude's web search
+ * Verify a fun fact using Claude's self-assessment
  *
  * @param {string} funFact - The fun fact to verify
  * @param {string} placeName - The place the fact is about
  * @returns {Promise<{verified: boolean, confidence: number}>}
  */
 export async function verifyFact(funFact, placeName) {
-  const prompt = `You have access to web search. Please verify if this fun fact about ${placeName} is accurate.
+  const prompt = `Rate your confidence in this fun fact about ${placeName}.
 
-FUN FACT TO VERIFY:
-"${funFact}"
+FACT: "${funFact}"
 
-Instructions:
-1. Use web search to find evidence about the claim in this fun fact
-2. Look for reliable sources (Wikipedia, official city sites, news, educational sites)
-3. Determine if the fact is accurate based on what you find
+How confident are you that this fact is accurate? Consider:
+- Is this a well-known, verifiable fact?
+- Could this be confused with another place?
+- Is there any chance this is outdated or incorrect?
 
-Respond in this exact JSON format (no markdown, just raw JSON):
-{
-  "verified": true or false,
-  "confidence": 1-10,
-  "reason": "brief explanation of what evidence you found"
-}
+Respond with ONLY a JSON object (no other text):
+{"confidence": <1-10>, "reason": "<brief explanation>"}
 
-Rules:
-- Only mark verified=true if you found clear evidence supporting the fact
-- Confidence 7+ means strong evidence from reliable sources
-- Confidence 4-6 means some evidence but not fully conclusive
-- Confidence 1-3 means weak or contradictory evidence
-- If you cannot find evidence either way, mark verified=false`
+Confidence scale:
+- 9-10: Absolutely certain, well-documented fact
+- 7-8: Very confident, commonly known
+- 5-6: Somewhat confident but not certain
+- 1-4: Uncertain or potentially incorrect`
 
   try {
     if (isProduction) {
-      // In production, use the serverless function
       const response = await fetch('/api/verify-fact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -68,7 +59,7 @@ Rules:
       return await response.json()
     }
 
-    // In development, call Claude with web search directly
+    // In development, call Claude directly
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -78,15 +69,8 @@ Rules:
         'anthropic-dangerous-direct-browser-access': 'true'
       },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 4096,
-        // Enable Claude's built-in web search tool
-        tools: [
-          {
-            type: 'web_search_20250305',
-            name: 'web_search'
-          }
-        ],
+        model: 'claude-3-haiku-20240307',
+        max_tokens: 100,
         messages: [{ role: 'user', content: prompt }]
       })
     })
@@ -98,17 +82,9 @@ Rules:
     }
 
     const data = await response.json()
+    const text = data.content[0].text.trim()
 
-    // Find the text response (Claude may return tool use blocks first)
-    const textBlock = data.content.find(block => block.type === 'text')
-    if (!textBlock) {
-      console.error('No text response from Claude')
-      return { verified: false, confidence: 0 }
-    }
-
-    const text = textBlock.text.trim()
-
-    // Parse the JSON response (handle potential markdown wrapping)
+    // Parse JSON response
     let jsonText = text
     if (text.includes('```')) {
       const match = text.match(/```(?:json)?\s*([\s\S]*?)```/)
@@ -118,7 +94,7 @@ Rules:
     const result = JSON.parse(jsonText)
 
     return {
-      verified: result.verified === true && result.confidence >= 5,
+      verified: result.confidence >= 7,
       confidence: result.confidence
     }
   } catch (error) {
@@ -129,7 +105,6 @@ Rules:
 
 /**
  * Check if verification is available
- * (Always true since we use Anthropic's built-in web search)
  */
 export function isVerificationAvailable() {
   return true
