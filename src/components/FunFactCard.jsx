@@ -265,9 +265,6 @@ function FunFactCard({ position, isActive, destination, route }) {
   // Triggers on: new city, 5 minutes elapsed, or 5 miles traveled
   // ============================================================
 
-  // Track if we're currently fetching to prevent duplicate requests
-  const isFetchingRef = useRef(false)
-
   // The main fetch function - can be called by position change OR time interval
   const fetchFunFactIfNeeded = async (currentPosition) => {
     // Prevent duplicate fetches
@@ -362,12 +359,11 @@ function FunFactCard({ position, isActive, destination, route }) {
         setLoadingStatus('')
         isFetchingRef.current = false
 
-      } catch (error) {
-        console.error('Error fetching fun fact:', error)
-        setIsLoading(false)
-        setLoadingStatus('')
-        isFetchingRef.current = false
-      }
+    } catch (error) {
+      console.error('Error fetching fun fact:', error)
+      setIsLoading(false)
+      setLoadingStatus('')
+      isFetchingRef.current = false
     }
   }
 
