@@ -32,7 +32,7 @@ function getDistanceMiles(pos1, pos2) {
 }
 
 // How often to show new facts
-const FACT_INTERVAL_MINUTES = 5
+const FACT_INTERVAL_MINUTES = 3  // Testing with 3 minutes
 const FACT_INTERVAL_MILES = 5
 
 function FunFactCard({ position, isActive, destination, route }) {
@@ -129,6 +129,9 @@ function FunFactCard({ position, isActive, destination, route }) {
     if (announcedDestinationRef.current === destination.id && funFact) return
 
     async function fetchDestinationFact() {
+      // Prevent position-based fetches while we're getting the destination fact
+      isFetchingRef.current = true
+
       try {
         setIsLoading(true)
         setIsVisible(false)
@@ -181,17 +184,20 @@ function FunFactCard({ position, isActive, destination, route }) {
         // (Set here instead of after speech, so CarPlay/audio issues don't block future facts)
         hasReadInitialFactRef.current = true
 
-        // Initialize time/distance tracking from the destination
+        // Initialize time/distance tracking from USER'S CURRENT position (not destination)
+        // This prevents the position effect from immediately triggering due to distance
         lastFactTimeRef.current = Date.now()
-        lastFactPositionRef.current = destination.coordinates
+        lastFactPositionRef.current = position || destination.coordinates
 
         setIsLoading(false)
         setLoadingStatus('')
+        isFetchingRef.current = false  // Allow future fetches
 
       } catch (error) {
         console.error('Error fetching destination fun fact:', error)
         setIsLoading(false)
         setLoadingStatus('')
+        isFetchingRef.current = false  // Allow future fetches even on error
       }
     }
 
