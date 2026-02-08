@@ -292,24 +292,35 @@ function FunFactCard({ position, isActive, destination, route }) {
       // Extract just the city/town name (first part before the comma)
       const shortPlace = place.split(',')[0].trim()
 
-      // Check if we should fetch a new fact based on:
-      // 1. New city/town
-      // 2. Time elapsed (5 minutes)
-      // 3. Distance traveled (5 miles)
+      // Check time since last fact
       const now = Date.now()
       const timeSinceLastFact = lastFactTimeRef.current
         ? (now - lastFactTimeRef.current) / 1000 / 60  // minutes
-        : Infinity
+        : 0
+
+      // IMPORTANT: Always wait at least FACT_INTERVAL_MINUTES before any new fact
+      // This prevents position-based facts from immediately replacing the destination fact
+      if (timeSinceLastFact < FACT_INTERVAL_MINUTES) {
+        return
+      }
+
+      // Also require that the initial fact has been spoken
+      if (!hasSpokenInitialFactRef.current) {
+        return
+      }
+
+      // Now check additional triggers:
+      // 1. New city/town
+      // 2. Distance traveled (5 miles)
       const distanceSinceLastFact = getDistanceMiles(lastFactPositionRef.current, currentPosition)
 
       const isNewPlace = shortPlace !== lastPlaceRef.current
-      const timeTriggered = timeSinceLastFact >= FACT_INTERVAL_MINUTES
       const distanceTriggered = distanceSinceLastFact >= FACT_INTERVAL_MILES
 
-      // Skip if none of the triggers are met
-      if (!isNewPlace && !timeTriggered && !distanceTriggered) return
+      // Skip if no triggers are met (time already passed, so any trigger works)
+      if (!isNewPlace && !distanceTriggered) return
 
-      console.log(`[FunFact] Triggered by: ${isNewPlace ? 'new place ' : ''}${timeTriggered ? 'time ' : ''}${distanceTriggered ? 'distance' : ''}`)
+      console.log(`[FunFact] Triggered after ${timeSinceLastFact.toFixed(1)} min by: ${isNewPlace ? 'new place ' : ''}${distanceTriggered ? 'distance' : 'time'}`)
 
       isFetchingRef.current = true
       setIsLoading(true)
@@ -402,16 +413,15 @@ function FunFactCard({ position, isActive, destination, route }) {
       // Check conditions using refs (fresh values)
       if (!isActiveRef.current) return
       if (!hasReadInitialFactRef.current) return
+      if (!hasSpokenInitialFactRef.current) return  // Wait until initial fact is spoken
       if (!positionRef.current) return
       if (isFetchingRef.current) return
 
-      console.log('[FunFact] Time check interval running...')
-
-      // Check if 5 minutes have passed
+      // Check if enough time has passed
       const now = Date.now()
       const timeSinceLastFact = lastFactTimeRef.current
         ? (now - lastFactTimeRef.current) / 1000 / 60
-        : Infinity
+        : 0
 
       if (timeSinceLastFact >= FACT_INTERVAL_MINUTES) {
         console.log(`[FunFact] Time trigger: ${timeSinceLastFact.toFixed(1)} minutes elapsed`)
