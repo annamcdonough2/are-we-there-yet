@@ -16,6 +16,25 @@ import { useState, useEffect, useRef } from 'react'
 import { getFunFact, getPlaceName } from '../services/claude'
 import { speak, stopSpeaking, isSpeechSupported, loadVoices } from '../services/speech'
 
+// Calculate distance between two coordinates in miles
+function getDistanceMiles(pos1, pos2) {
+  if (!pos1 || !pos2) return 0
+  const [lon1, lat1] = pos1
+  const [lon2, lat2] = pos2
+  const R = 3959 // Earth's radius in miles
+  const dLat = (lat2 - lat1) * Math.PI / 180
+  const dLon = (lon2 - lon1) * Math.PI / 180
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon/2) * Math.sin(dLon/2)
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
+  return R * c
+}
+
+// How often to show new facts
+const FACT_INTERVAL_MINUTES = 5
+const FACT_INTERVAL_MILES = 5
+
 function FunFactCard({ position, isActive, destination, route }) {
   // ============================================================
   // STATE
@@ -38,6 +57,10 @@ function FunFactCard({ position, isActive, destination, route }) {
 
   // Track the last place we got a fact for (to avoid duplicates)
   const [lastPlace, setLastPlace] = useState(null)
+
+  // Track when and where we last fetched a fact (for time/distance triggers)
+  const lastFactTimeRef = useRef(null)
+  const lastFactPositionRef = useRef(null)
 
   // Animation state
   const [isVisible, setIsVisible] = useState(false)
@@ -148,6 +171,14 @@ function FunFactCard({ position, isActive, destination, route }) {
           setIsVisible(true)
         }
 
+        // Mark initial fact as ready - this enables position-based facts
+        // (Set here instead of after speech, so CarPlay/audio issues don't block future facts)
+        hasReadInitialFactRef.current = true
+
+        // Initialize time/distance tracking from the destination
+        lastFactTimeRef.current = Date.now()
+        lastFactPositionRef.current = destination.coordinates
+
         setIsLoading(false)
         setLoadingStatus('')
 
@@ -226,15 +257,14 @@ function FunFactCard({ position, isActive, destination, route }) {
 
   // ============================================================
   // EFFECT: Get fun facts when position changes significantly
-  // (Only runs AFTER the initial destination fact has been read)
+  // Triggers on: new city, 5 minutes elapsed, or 5 miles traveled
   // ============================================================
 
   useEffect(() => {
     // Only run if we have a position and tracking is active
     if (!position || !isActive) return
 
-    // Don't run until the initial trip announcement is complete
-    // The destination-based fact handles the first fun fact
+    // Don't run until the initial destination fact is ready
     if (!hasReadInitialFactRef.current) return
 
     async function fetchFunFact() {
@@ -248,8 +278,24 @@ function FunFactCard({ position, isActive, destination, route }) {
         // Extract just the city/town name (first part before the comma)
         const shortPlace = place.split(',')[0].trim()
 
-        // Don't fetch again if we're still in the same place
-        if (shortPlace === lastPlace) return
+        // Check if we should fetch a new fact based on:
+        // 1. New city/town
+        // 2. Time elapsed (5 minutes)
+        // 3. Distance traveled (5 miles)
+        const now = Date.now()
+        const timeSinceLastFact = lastFactTimeRef.current
+          ? (now - lastFactTimeRef.current) / 1000 / 60  // minutes
+          : Infinity
+        const distanceSinceLastFact = getDistanceMiles(lastFactPositionRef.current, position)
+
+        const isNewPlace = shortPlace !== lastPlace
+        const timeTriggered = timeSinceLastFact >= FACT_INTERVAL_MINUTES
+        const distanceTriggered = distanceSinceLastFact >= FACT_INTERVAL_MILES
+
+        // Skip if none of the triggers are met
+        if (!isNewPlace && !timeTriggered && !distanceTriggered) return
+
+        console.log(`[FunFact] Triggered by: ${isNewPlace ? 'new place' : ''} ${timeTriggered ? 'time' : ''} ${distanceTriggered ? 'distance' : ''}`)
 
         setIsLoading(true)
         setLastPlace(shortPlace)
@@ -272,6 +318,10 @@ function FunFactCard({ position, isActive, destination, route }) {
 
         // Small delay for animation
         await new Promise(resolve => setTimeout(resolve, 300))
+
+        // Update tracking refs
+        lastFactTimeRef.current = Date.now()
+        lastFactPositionRef.current = position
 
         if (result && result.fact) {
           setFunFact(result.fact)
