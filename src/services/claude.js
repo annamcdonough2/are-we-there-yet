@@ -46,6 +46,7 @@ async function generateFunFact(placeName, isDestination) {
 Rules:
 - This is for 6-year-old children. ONLY share kid-safe, age-appropriate facts
 - NEVER mention alcoholic beverages (wine, beer, etc.), drugs, or anything explicit
+- NEVER mention income inequality, wealth, home prices, or "rich/poor" areas
 - Only share facts you are confident are true. Do not make up or guess information
 - Focus on topics like: animals, nature, sports, history, food (kid-friendly), buildings, parks, fun records
 - Start with "You're heading to [city name]!" or "We're going to [city name]!" (just the city, not full address)
@@ -66,6 +67,7 @@ Now tell the kids about their destination, ${placeName}:`
 Rules:
 - This is for 6-year-old children. ONLY share kid-safe, age-appropriate facts
 - NEVER mention alcoholic beverages (wine, beer, etc.), drugs, or anything explicit
+- NEVER mention income inequality, wealth, home prices, or "rich/poor" areas
 - Only share facts you are confident are true. Do not make up or guess information
 - Focus on topics like: animals, nature, sports, history, food (kid-friendly), buildings, parks, fun records
 - Start with "You're in [city name]!" or "We're in [city name]!" (just the city, not full address)
@@ -110,7 +112,7 @@ Now tell the kids about ${placeName}:`
         'anthropic-dangerous-direct-browser-access': 'true'  // Required for browser calls
       },
       body: JSON.stringify({
-        model: 'claude-3-haiku-20240307',  // Fast and cheap - perfect for fun facts
+        model: 'claude-haiku-4-5-20251001',  // Fast and cheap - perfect for fun facts
         max_tokens: 150,  // Keep facts short
         messages: [
           {
