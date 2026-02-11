@@ -14,7 +14,7 @@
  * 6. App passes route info to ProgressPanel to display
  */
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 // useState is a React feature that lets us store data that can change
 // Think of it like a whiteboard we can write on and erase
 
@@ -23,6 +23,7 @@ import Map from './components/Map'
 import DestinationInput from './components/DestinationInput'
 import ProgressPanel from './components/ProgressPanel'
 import FunFactCard from './components/FunFactCard'
+import ArrivalModal from './components/ArrivalModal'
 
 function App() {
   // ============================================================
@@ -40,6 +41,40 @@ function App() {
   // The calculated route information
   // Contains: { durationMinutes, distanceMiles, geometry, steps }
   const [route, setRoute] = useState(null)
+
+  // Show the arrival celebration modal
+  const [showArrivalModal, setShowArrivalModal] = useState(false)
+
+  // Track which destination we've already celebrated (to avoid repeated popups)
+  const celebratedDestinationRef = useRef(null)
+
+  // ============================================================
+  // EFFECTS
+  // ============================================================
+
+  // Detect arrival at destination (within 0.1 miles / ~500 feet)
+  useEffect(() => {
+    if (!route || !destination) return
+
+    // Check if we're close enough to the destination
+    const distanceMiles = parseFloat(route.distanceMiles)
+    const ARRIVAL_THRESHOLD_MILES = 0.1  // About 500 feet
+
+    if (distanceMiles <= ARRIVAL_THRESHOLD_MILES) {
+      // Only celebrate once per destination
+      if (celebratedDestinationRef.current !== destination.id) {
+        celebratedDestinationRef.current = destination.id
+        setShowArrivalModal(true)
+      }
+    }
+  }, [route, destination])
+
+  // Reset celebration tracking when destination changes
+  useEffect(() => {
+    if (!destination) {
+      celebratedDestinationRef.current = null
+    }
+  }, [destination])
 
   // ============================================================
   // EVENT HANDLERS (Functions that respond to user actions)
@@ -61,6 +96,11 @@ function App() {
   // Called when the Map finishes calculating the route
   function handleRouteCalculated(routeData) {
     setRoute(routeData)
+  }
+
+  // Called when user closes the arrival celebration modal
+  function handleArrivalModalClose() {
+    setShowArrivalModal(false)
   }
 
   // ============================================================
@@ -122,6 +162,13 @@ function App() {
           route={route}
         />
       </footer>
+
+      {/* LAYER 5: Arrival celebration modal */}
+      <ArrivalModal
+        isOpen={showArrivalModal}
+        destinationName={destination?.shortName || destination?.name?.split(',')[0] || 'your destination'}
+        onClose={handleArrivalModalClose}
+      />
 
     </div>
   )
